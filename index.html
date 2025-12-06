@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tilde Graph Architect</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="control-panel">
+            <h1>Tilde Graph Architect</h1>
+
+            <div class="control-group">
+                <label>Nodes per column</label>
+                <div class="nodes-input-container">
+                    <input class="nodes-input-digit" type="text" maxlength="1" inputmode="numeric" data-index="0" value="1">
+                    <input class="nodes-input-digit" type="text" maxlength="1" inputmode="numeric" data-index="1" value="5">
+                    <input class="nodes-input-digit" type="text" maxlength="1" inputmode="numeric" data-index="2" value="6">
+                    <input class="nodes-input-digit" type="text" maxlength="1" inputmode="numeric" data-index="3" value="">
+                    <input class="nodes-input-digit" type="text" maxlength="1" inputmode="numeric" data-index="4" value="">
+                    <input class="nodes-input-digit" type="text" maxlength="1" inputmode="numeric" data-index="5" value="">
+                    <input class="nodes-input-digit" type="text" maxlength="1" inputmode="numeric" data-index="6" value="">
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label for="columnSpacing">Column spacing: <input type="number" id="columnSpacingValue" class="slider-input" value="1.0" step="0.05" min="0" max="1.5"></label>
+                <input type="range" id="columnSpacing" min="0" max="1.5" step="0.05" value="1">
+            </div>
+
+            <div class="control-group">
+                <label for="rowSpacing">Row spacing: <input type="number" id="rowSpacingValue" class="slider-input" value="1.0" step="0.05" min="0" max="1.5"></label>
+                <input type="range" id="rowSpacing" min="0" max="1.5" step="0.05" value="1">
+            </div>
+
+            <div class="control-group">
+                <label for="lineThickness">Line thickness: <input type="number" id="lineThicknessValue" class="slider-input" value="0.5" step="0.1" min="0.1" max="10"></label>
+                <input type="range" id="lineThickness" min="0.1" max="10" step="0.1" value="0.5">
+            </div>
+
+            <div class="control-group">
+                <label for="nodeBaseSize">Node base size: <input type="number" id="nodeBaseSizeValue" class="slider-input" value="3.50" step="0.5" min="0" max="20"></label>
+                <input type="range" id="nodeBaseSize" min="0" max="20" step="0.5" value="3.5">
+            </div>
+
+            <div class="control-group">
+                <label for="nodeScaleK">Node scale k: <input type="number" id="nodeScaleKValue" class="slider-input" value="0.50" step="0.1" min="0" max="5"></label>
+                <input type="range" id="nodeScaleK" min="0" max="5" step="0.1" value="0.5">
+            </div>
+
+            <div class="control-group">
+                <label for="mergeTolerance">Merge tolerance (px): <input type="number" id="mergeToleranceValue" class="slider-input" value="1" step="0.1" min="0.1" max="10"></label>
+                <input type="range" id="mergeTolerance" min="0.1" max="10" step="0.1" value="1">
+            </div>
+
+            <div class="control-group">
+                <label>
+                    <input type="checkbox" id="showEdgeNodes" checked>
+                    Show edge nodes
+                </label>
+            </div>
+
+            <div class="control-group">
+                <label for="lineColor">Line color</label>
+                <div class="color-input-group">
+                    <input type="color" id="lineColor" value="#939393">
+                    <input type="text" id="lineColorHex" class="hex-input" value="#939393" placeholder="#939393">
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label for="nodeColor">Node color</label>
+                <div class="color-input-group">
+                    <input type="color" id="nodeColor" value="#939393">
+                    <input type="text" id="nodeColorHex" class="hex-input" value="#939393" placeholder="#939393">
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label for="bgColor">Background color</label>
+                <div class="color-input-group">
+                    <input type="color" id="bgColor" value="#000000">
+                    <input type="text" id="bgColorHex" class="hex-input" value="#000000" placeholder="#000000">
+                </div>
+            </div>
+
+            <div class="button-group">
+                <button id="resetBtn">Reset to Default</button>
+                <button id="downloadBtn">Download SVG</button>
+            </div>
+        </div>
+
+        <div class="preview-container">
+            <div id="preview" class="preview"></div>
+        </div>
+    </div>
+
+    <script src="graph.js"></script>
+</body>
+</html>
