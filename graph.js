@@ -13,16 +13,30 @@ const config = {
     columnSpacing: 1.0,
     rowSpacing: 1.0,
     lineThickness: 0.5,
-    lineColor: '#939393',
-    nodeBaseSize: 3.5,
-    nodeScaleK: 0.5,
-    nodeColor: '#939393',
+    lineColor: '#F3F3F4',
+    nodeBaseSize: 8.0,
+    nodeScaleK: 1.0,
+    nodeColor: '#F3F3F4',
     mergeTolerance: 1,
     showEdgeNodes: true,
-    bgColor: '#000000',
+    bgColor: '#010204',
 };
 
 let lastSvg = '';
+let lastStats = { nodes: 0, edges: 0, intersections: 0 };
+let activePresetIndex = 0;
+
+// Preset configurations
+const presets = [
+    { name: 'Diamond', nodes: '1,5,3,5,1', columnSpacing: 1.0, rowSpacing: 1.0 },
+    { name: 'Hourglass', nodes: '5,1,5', columnSpacing: 1.0, rowSpacing: 1.0 },
+    { name: 'Pyramid', nodes: '1,3,5,7', columnSpacing: 1.0, rowSpacing: 1.0 },
+    { name: 'Wave', nodes: '3,5,3,5,3', columnSpacing: 1.0, rowSpacing: 1.0 },
+    { name: 'Funnel', nodes: '7,5,3,1', columnSpacing: 1.0, rowSpacing: 1.0 },
+    { name: 'Bow', nodes: '4,2,4,2,4', columnSpacing: 1.0, rowSpacing: 1.0 },
+    { name: 'Tower', nodes: '1,1,1,1,1,1', columnSpacing: 1.0, rowSpacing: 1.0 },
+    { name: 'Burst', nodes: '1,8,1', columnSpacing: 1.0, rowSpacing: 1.0 },
+];
 
 // ============================================================================
 // Core Functions
@@ -30,12 +44,10 @@ let lastSvg = '';
 
 /**
  * Parse nodes per column input string (e.g., "1,5,6")
- * Returns array of integers, each clamped to [1, 8]
- * Overall array length clamped to [2, 6]
  */
 function parseNodesPerColumn(inputStr) {
     if (!inputStr || inputStr.trim() === '') {
-        return [1, 5, 6]; // default
+        return [1, 5, 3, 5, 1];
     }
 
     const parts = inputStr.split(',').map(s => s.trim()).filter(s => s !== '');
@@ -45,13 +57,11 @@ function parseNodesPerColumn(inputStr) {
     }).filter(n => n > 0);
 
     if (nums.length === 0) {
-        return [1, 5, 6]; // fallback default
+        return [1, 5, 3, 5, 1];
     }
 
-    // Clamp to 2-7 columns
     const clamped = nums.slice(0, 7);
     if (clamped.length < 2) {
-        // Pad with 1s to reach 2 columns
         while (clamped.length < 2) {
             clamped.push(1);
         }
@@ -64,9 +74,7 @@ function parseNodesPerColumn(inputStr) {
  * Read all control inputs and update config object
  */
 function readControlsToConfig() {
-    // Get nodes from individual digit inputs
-    const digitInputs = document.querySelectorAll('.nodes-input-digit');
-    const nodesInput = Array.from(digitInputs).map(input => input.value).filter(v => v).join(',');
+    const nodesInput = document.getElementById('nodesInput').value;
 
     config.columnSpacing = parseFloat(document.getElementById('columnSpacing').value) || 1.0;
     config.rowSpacing = parseFloat(document.getElementById('rowSpacing').value) || 1.0;
@@ -84,9 +92,6 @@ function readControlsToConfig() {
 
 /**
  * Generate nodes for each column
- * Returns { nodes, columns }
- * nodes: array of { id, colIndex, rowIndex, x, y, degree }
- * columns: array of node indices for each column
  */
 function generateNodes(cfg) {
     const nodes = [];
@@ -99,13 +104,11 @@ function generateNodes(cfg) {
     cfg.nodesPerColumn.forEach((nodeCount, colIndex) => {
         const colNodes = [];
 
-        // Horizontal position: evenly spaced with configurable spacing multiplier
         const spacingFraction = cfg.nodesPerColumn.length > 1
             ? (colIndex / (cfg.nodesPerColumn.length - 1)) * cfg.columnSpacing
             : 0;
         const colX = cfg.marginLeft + spacingFraction * innerWidth;
 
-        // Vertical positions: evenly spaced within margins with configurable spacing multiplier
         for (let rowIndex = 0; rowIndex < nodeCount; rowIndex++) {
             let nodeY;
             if (nodeCount === 1) {
@@ -137,8 +140,7 @@ function generateNodes(cfg) {
 }
 
 /**
- * Generate edges between adjacent columns (complete bipartite)
- * Updates node degree counts
+ * Generate edges between adjacent columns
  */
 function generateEdges(nodes, columns) {
     const edges = [];
@@ -161,7 +163,6 @@ function generateEdges(nodes, columns) {
 
 /**
  * Line segment intersection test
- * Returns { x, y } if segments intersect inside both ranges, null otherwise
  */
 function lineSegmentIntersection(p1, p2, p3, p4) {
     const x1 = p1.x, y1 = p1.y;
@@ -171,13 +172,12 @@ function lineSegmentIntersection(p1, p2, p3, p4) {
 
     const denom = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
     if (Math.abs(denom) < 1e-10) {
-        return null; // parallel or coincident
+        return null;
     }
 
     const t = ((x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4)) / denom;
     const u = -((x1 - x2) * (y1 - y3) - (y1 - y2) * (x1 - x3)) / denom;
 
-    // Both t and u must be in (0, 1) for interior intersection
     if (t > 0 && t < 1 && u > 0 && u < 1) {
         const ix = x1 + t * (x2 - x1);
         const iy = y1 + t * (y2 - y1);
@@ -189,23 +189,19 @@ function lineSegmentIntersection(p1, p2, p3, p4) {
 
 /**
  * Compute all line–line intersections and merge nearby ones
- * Returns array of { x, y, count }
  */
 function computeIntersections(nodes, edges, cfg) {
     const intersections = [];
 
-    // Loop over all unordered pairs of edges
     for (let i = 0; i < edges.length; i++) {
         for (let j = i + 1; j < edges.length; j++) {
             const e1 = edges[i];
             const e2 = edges[j];
 
-            // Skip if they share an endpoint
             if (e1.a === e2.a || e1.a === e2.b || e1.b === e2.a || e1.b === e2.b) {
                 continue;
             }
 
-            // Compute intersection
             const p1 = nodes[e1.a];
             const p2 = nodes[e1.b];
             const p3 = nodes[e2.a];
@@ -216,7 +212,6 @@ function computeIntersections(nodes, edges, cfg) {
                 continue;
             }
 
-            // Merge nearby intersections
             let merged = false;
             for (const existing of intersections) {
                 const dist = Math.sqrt(
@@ -249,7 +244,6 @@ function computeIntersections(nodes, edges, cfg) {
 function buildSvg(nodes, edges, intersections, cfg) {
     let svgContent = '';
 
-    // Draw lines (edges)
     for (const edge of edges) {
         const node1 = nodes[edge.a];
         const node2 = nodes[edge.b];
@@ -257,9 +251,6 @@ function buildSvg(nodes, edges, intersections, cfg) {
             `stroke="${cfg.lineColor}" stroke-width="${cfg.lineThickness}" fill="none" />`;
     }
 
-    // Draw intersection squares
-    // Sized same way as nodes: baseSize + scaleK * degree
-    // For intersections, degree = count (number of lines crossing)
     for (const inter of intersections) {
         const size = cfg.nodeBaseSize + cfg.nodeScaleK * inter.count;
         if (size > 0) {
@@ -269,9 +260,7 @@ function buildSvg(nodes, edges, intersections, cfg) {
         }
     }
 
-    // Draw node squares (endpoint markers)
     for (const node of nodes) {
-        // Skip edge nodes if showEdgeNodes is false
         if (!cfg.showEdgeNodes) {
             const isLeftmost = node.colIndex === 0;
             const isRightmost = node.colIndex === cfg.nodesPerColumn.length - 1;
@@ -288,7 +277,6 @@ function buildSvg(nodes, edges, intersections, cfg) {
         }
     }
 
-    // Calculate content bounds
     let minX = cfg.svgWidth, maxX = 0, minY = cfg.svgHeight, maxY = 0;
 
     for (const node of nodes) {
@@ -310,7 +298,6 @@ function buildSvg(nodes, edges, intersections, cfg) {
         maxY = Math.max(maxY, inter.y + half);
     }
 
-    // Account for line thickness
     const padding = cfg.lineThickness / 2;
     minX -= padding;
     maxX += padding;
@@ -320,12 +307,77 @@ function buildSvg(nodes, edges, intersections, cfg) {
     const width = maxX - minX;
     const height = maxY - minY;
 
-    // Wrap in SVG element with calculated bounds
     const svg = `<svg width="${width}" height="${height}" viewBox="${minX} ${minY} ${width} ${height}" xmlns="http://www.w3.org/2000/svg">
 ${svgContent}
 </svg>`;
 
     return svg;
+}
+
+/**
+ * Generate a mini SVG preview for presets
+ */
+function generatePresetPreview(nodesStr) {
+    const nodesPerColumn = parseNodesPerColumn(nodesStr);
+    const previewSize = 48;
+    const margin = 8;
+    const innerSize = previewSize - margin * 2;
+
+    let svgContent = '';
+    const columns = [];
+
+    // Generate node positions
+    nodesPerColumn.forEach((count, colIdx) => {
+        const x = margin + (colIdx / Math.max(1, nodesPerColumn.length - 1)) * innerSize;
+        const colNodes = [];
+
+        for (let i = 0; i < count; i++) {
+            const y = count === 1
+                ? previewSize / 2
+                : margin + (i / (count - 1)) * innerSize;
+            colNodes.push({ x, y });
+        }
+        columns.push(colNodes);
+    });
+
+    // Draw edges with teal accent color
+    for (let i = 0; i < columns.length - 1; i++) {
+        for (const n1 of columns[i]) {
+            for (const n2 of columns[i + 1]) {
+                svgContent += `<line x1="${n1.x}" y1="${n1.y}" x2="${n2.x}" y2="${n2.y}" stroke="rgba(108, 179, 204, 0.5)" stroke-width="0.75"/>`;
+            }
+        }
+    }
+
+    // Draw nodes with brighter accent
+    for (const col of columns) {
+        for (const n of col) {
+            svgContent += `<circle cx="${n.x}" cy="${n.y}" r="2" fill="rgba(108, 179, 204, 0.9)"/>`;
+        }
+    }
+
+    return `<svg viewBox="0 0 ${previewSize} ${previewSize}" xmlns="http://www.w3.org/2000/svg">${svgContent}</svg>`;
+}
+
+/**
+ * Update stats display
+ */
+function updateStats(nodeCount, edgeCount, intersectionCount) {
+    document.getElementById('statNodes').textContent = nodeCount;
+    document.getElementById('statEdges').textContent = edgeCount;
+    document.getElementById('statIntersections').textContent = intersectionCount;
+    lastStats = { nodes: nodeCount, edges: edgeCount, intersections: intersectionCount };
+}
+
+/**
+ * Update slider progress indicator
+ */
+function updateSliderProgress(slider) {
+    const min = parseFloat(slider.min);
+    const max = parseFloat(slider.max);
+    const val = parseFloat(slider.value);
+    const progress = ((val - min) / (max - min)) * 100;
+    slider.style.setProperty('--progress', `${progress}%`);
 }
 
 /**
@@ -342,23 +394,69 @@ function render() {
 
     const preview = document.getElementById('preview');
     preview.innerHTML = lastSvg;
-    preview.style.backgroundColor = config.bgColor;
+
+    // Apply background to the entire canvas area (not included in SVG export)
+    document.querySelector('.canvas-area').style.backgroundColor = config.bgColor;
+
+    // Update stats
+    updateStats(nodes.length, edges.length, intersections.length);
+}
+
+/**
+ * Apply a preset
+ */
+function applyPreset(index) {
+    const preset = presets[index];
+    if (!preset) return;
+
+    activePresetIndex = index;
+
+    // Update nodes input
+    document.getElementById('nodesInput').value = preset.nodes;
+
+    // Update spacing if preset has custom values
+    if (preset.columnSpacing !== undefined) {
+        document.getElementById('columnSpacing').value = preset.columnSpacing;
+        document.getElementById('columnSpacingValue').textContent = preset.columnSpacing.toFixed(2);
+        updateSliderProgress(document.getElementById('columnSpacing'));
+    }
+    if (preset.rowSpacing !== undefined) {
+        document.getElementById('rowSpacing').value = preset.rowSpacing;
+        document.getElementById('rowSpacingValue').textContent = preset.rowSpacing.toFixed(2);
+        updateSliderProgress(document.getElementById('rowSpacing'));
+    }
+
+    // Update preset buttons
+    document.querySelectorAll('.preset-btn').forEach((btn, i) => {
+        btn.classList.toggle('active', i === index);
+    });
+
+    render();
+}
+
+/**
+ * Generate random nodes configuration
+ */
+function randomizeNodes() {
+    const numColumns = Math.floor(Math.random() * 4) + 3; // 3-6 columns
+    const nodes = [];
+    for (let i = 0; i < numColumns; i++) {
+        nodes.push(Math.floor(Math.random() * 7) + 1); // 1-7 nodes
+    }
+    document.getElementById('nodesInput').value = nodes.join(',');
+
+    // Clear active preset
+    document.querySelectorAll('.preset-btn').forEach(btn => btn.classList.remove('active'));
+
+    render();
 }
 
 /**
  * Reset all controls to default values
  */
 function resetToDefaults() {
-    // Reset nodes per column to 1,5,6
-    const digitInputs = document.querySelectorAll('.nodes-input-digit');
-    digitInputs[0].value = '1';
-    digitInputs[1].value = '5';
-    digitInputs[2].value = '6';
-    for (let i = 3; i < digitInputs.length; i++) {
-        digitInputs[i].value = '';
-    }
+    document.getElementById('nodesInput').value = '1,5,3,5,1';
 
-    // Reset all sliders and other controls
     document.getElementById('columnSpacing').value = 1.0;
     document.getElementById('columnSpacingValue').textContent = '1.00';
 
@@ -368,29 +466,31 @@ function resetToDefaults() {
     document.getElementById('lineThickness').value = 0.5;
     document.getElementById('lineThicknessValue').textContent = '0.50';
 
-    document.getElementById('nodeBaseSize').value = 3.5;
-    document.getElementById('nodeBaseSizeValue').textContent = '3.50';
+    document.getElementById('nodeBaseSize').value = 8.0;
+    document.getElementById('nodeBaseSizeValue').textContent = '8.00';
 
-    document.getElementById('nodeScaleK').value = 0.5;
-    document.getElementById('nodeScaleKValue').textContent = '0.50';
+    document.getElementById('nodeScaleK').value = 1.0;
+    document.getElementById('nodeScaleKValue').textContent = '1.00';
 
     document.getElementById('mergeTolerance').value = 1;
     document.getElementById('mergeToleranceValue').textContent = '1.00';
 
     document.getElementById('showEdgeNodes').checked = true;
 
-    // Reset colors
-    document.getElementById('lineColor').value = '#939393';
-    document.getElementById('lineColorHex').value = '#939393';
+    document.getElementById('lineColor').value = '#F3F3F4';
+    document.getElementById('lineColorHex').value = '#F3F3F4';
 
-    document.getElementById('nodeColor').value = '#939393';
-    document.getElementById('nodeColorHex').value = '#939393';
+    document.getElementById('nodeColor').value = '#F3F3F4';
+    document.getElementById('nodeColorHex').value = '#F3F3F4';
 
-    document.getElementById('bgColor').value = '#000000';
-    document.getElementById('bgColorHex').value = '#000000';
+    document.getElementById('bgColor').value = '#010204';
+    document.getElementById('bgColorHex').value = '#010204';
 
-    // Re-render with defaults
-    render();
+    // Update all slider progress bars
+    document.querySelectorAll('.slider').forEach(updateSliderProgress);
+
+    // Set first preset as active
+    applyPreset(0);
 }
 
 /**
@@ -398,7 +498,6 @@ function resetToDefaults() {
  */
 function downloadSvg() {
     if (!lastSvg) {
-        alert('No SVG to download. Please click "Regenerate" first.');
         return;
     }
 
@@ -413,11 +512,39 @@ function downloadSvg() {
     URL.revokeObjectURL(url);
 }
 
+/**
+ * Toggle section expansion
+ */
+function toggleSection(header) {
+    const section = header.closest('.panel-section');
+    const content = section.querySelector('.section-content');
+    const isExpanded = header.dataset.expanded === 'true';
+
+    header.dataset.expanded = !isExpanded;
+    content.classList.toggle('collapsed', isExpanded);
+}
+
 // ============================================================================
 // Initialize on Page Load
 // ============================================================================
 
 document.addEventListener('DOMContentLoaded', () => {
+    // Generate preset buttons
+    const presetsGrid = document.getElementById('presetsGrid');
+    presets.forEach((preset, index) => {
+        const btn = document.createElement('button');
+        btn.className = 'preset-btn' + (index === 0 ? ' active' : '');
+        btn.innerHTML = generatePresetPreview(preset.nodes);
+        btn.title = preset.name;
+        btn.addEventListener('click', () => applyPreset(index));
+        presetsGrid.appendChild(btn);
+    });
+
+    // Set up section headers
+    document.querySelectorAll('.section-header').forEach(header => {
+        header.addEventListener('click', () => toggleSection(header));
+    });
+
     // Set up color picker and HEX input synchronization
     const colorPairs = [
         { picker: 'lineColor', hex: 'lineColorHex' },
@@ -429,20 +556,16 @@ document.addEventListener('DOMContentLoaded', () => {
         const pickerElem = document.getElementById(picker);
         const hexElem = document.getElementById(hex);
 
-        // When color picker changes, update HEX input
         pickerElem.addEventListener('input', (e) => {
             hexElem.value = e.target.value.toUpperCase();
             render();
         });
 
-        // When HEX input changes, update color picker
         hexElem.addEventListener('input', (e) => {
             let value = e.target.value.trim();
-            // Add # if missing
             if (value && !value.startsWith('#')) {
                 value = '#' + value;
             }
-            // Validate hex format
             if (/^#[0-9A-F]{6}$/i.test(value)) {
                 pickerElem.value = value;
                 hexElem.value = value.toUpperCase();
@@ -451,44 +574,39 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Set up nodes per column digit inputs
-    const digitInputs = document.querySelectorAll('.nodes-input-digit');
-    digitInputs.forEach((input, index) => {
-        input.addEventListener('input', (e) => {
-            // Only allow digits 0-9
-            e.target.value = e.target.value.replace(/[^0-9]/g, '').slice(0, 1);
+    // Set up nodes input with auto-comma formatting
+    const nodesInput = document.getElementById('nodesInput');
+    nodesInput.addEventListener('input', (e) => {
+        // Get cursor position before formatting
+        const cursorPos = e.target.selectionStart;
+        const oldValue = e.target.value;
 
-            // Move to next input if a digit was entered
-            if (e.target.value && index < digitInputs.length - 1) {
-                digitInputs[index + 1].focus();
-            }
+        // Remove all non-digits, then join with commas
+        const digits = oldValue.replace(/[^0-9]/g, '').split('');
+        const formatted = digits.join(',');
 
-            render();
-        });
+        // Update value
+        e.target.value = formatted;
 
-        input.addEventListener('keydown', (e) => {
-            // Handle backspace to move to previous input
-            if (e.key === 'Backspace' && !input.value) {
-                if (index > 0) {
-                    digitInputs[index - 1].focus();
-                }
-            }
-        });
+        // Adjust cursor position (account for added commas)
+        const oldCommasBefore = (oldValue.slice(0, cursorPos).match(/,/g) || []).length;
+        const digitsTyped = cursorPos - oldCommasBefore;
+        const newCursorPos = digitsTyped > 0 ? digitsTyped * 2 - 1 : 0;
+        e.target.setSelectionRange(Math.min(newCursorPos + 1, formatted.length), Math.min(newCursorPos + 1, formatted.length));
 
-        input.addEventListener('focus', (e) => {
-            // Select all text on focus
-            e.target.select();
-        });
+        // Clear active preset when manually editing
+        document.querySelectorAll('.preset-btn').forEach(btn => btn.classList.remove('active'));
+        render();
     });
 
-    // Reset to defaults on page load
-    resetToDefaults();
+    // Set up randomize button
+    document.getElementById('randomizeBtn').addEventListener('click', randomizeNodes);
 
     // Button event listeners
     document.getElementById('resetBtn').addEventListener('click', resetToDefaults);
     document.getElementById('downloadBtn').addEventListener('click', downloadSvg);
 
-    // Map of slider IDs to their value input IDs
+    // Map of slider IDs to their value display IDs
     const sliderValueMap = {
         'columnSpacing': 'columnSpacingValue',
         'rowSpacing': 'rowSpacingValue',
@@ -498,65 +616,26 @@ document.addEventListener('DOMContentLoaded', () => {
         'mergeTolerance': 'mergeToleranceValue'
     };
 
-    // Set up synchronized slider and input controls
-    Object.entries(sliderValueMap).forEach(([sliderId, inputId]) => {
+    // Set up sliders
+    Object.entries(sliderValueMap).forEach(([sliderId, valueId]) => {
         const slider = document.getElementById(sliderId);
-        const input = document.getElementById(inputId);
+        const valueDisplay = document.getElementById(valueId);
 
-        if (slider && input) {
-            // When slider changes, update input
+        if (slider && valueDisplay) {
+            // Initial progress
+            updateSliderProgress(slider);
+
             slider.addEventListener('input', (e) => {
                 const value = parseFloat(e.target.value);
-                input.value = value.toFixed(2);
+                valueDisplay.textContent = value.toFixed(2);
+                updateSliderProgress(slider);
                 render();
-            });
-
-            // Select all text on focus (click or tab)
-            input.addEventListener('focus', (e) => {
-                setTimeout(() => {
-                    e.target.select();
-                }, 0);
-            });
-
-            // When input changes, update slider
-            input.addEventListener('input', (e) => {
-                let value = parseFloat(e.target.value);
-
-                // Only update if we have a valid number
-                if (!isNaN(value)) {
-                    // Clamp to min/max
-                    const min = parseFloat(slider.min);
-                    const max = parseFloat(slider.max);
-                    value = Math.max(min, Math.min(max, value));
-
-                    slider.value = value;
-                }
-            });
-
-            // When input loses focus, ensure it's properly formatted and render
-            input.addEventListener('blur', (e) => {
-                let value = parseFloat(e.target.value);
-                const min = parseFloat(slider.min);
-                const max = parseFloat(slider.max);
-                value = Math.max(min, Math.min(max, value || 0));
-                input.value = value.toFixed(2);
-                slider.value = value;
-                render();
-            });
-
-            // Allow Enter key to confirm and blur
-            input.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') {
-                    input.blur();
-                }
             });
         }
     });
 
     // Real-time preview update on control changes
-    const controls = [
-        'showEdgeNodes', 'lineColor', 'nodeColor', 'bgColor'
-    ];
+    const controls = ['showEdgeNodes', 'lineColor', 'nodeColor', 'bgColor'];
 
     controls.forEach(id => {
         const elem = document.getElementById(id);
@@ -568,4 +647,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     });
+
+    // Initialize with defaults
+    resetToDefaults();
 });
