@@ -340,19 +340,19 @@ function generatePresetPreview(nodesStr) {
         columns.push(colNodes);
     });
 
-    // Draw edges with teal accent color
+    // Draw edges with gradient colors
     for (let i = 0; i < columns.length - 1; i++) {
         for (const n1 of columns[i]) {
             for (const n2 of columns[i + 1]) {
-                svgContent += `<line x1="${n1.x}" y1="${n1.y}" x2="${n2.x}" y2="${n2.y}" stroke="rgba(108, 179, 204, 0.5)" stroke-width="0.75"/>`;
+                svgContent += `<line x1="${n1.x}" y1="${n1.y}" x2="${n2.x}" y2="${n2.y}" stroke="rgba(69, 116, 140, 0.6)" stroke-width="0.75"/>`;
             }
         }
     }
 
-    // Draw nodes with brighter accent
+    // Draw nodes with light gradient color
     for (const col of columns) {
         for (const n of col) {
-            svgContent += `<circle cx="${n.x}" cy="${n.y}" r="2" fill="rgba(108, 179, 204, 0.9)"/>`;
+            svgContent += `<circle cx="${n.x}" cy="${n.y}" r="2" fill="#BFE8FE"/>`;
         }
     }
 
