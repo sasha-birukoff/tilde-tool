@@ -29,12 +29,12 @@ let activePresetIndex = 0;
 // Preset configurations
 const presets = [
     { name: 'Diamond', nodes: '1,5,3,5,1', columnSpacing: 1.0, rowSpacing: 1.0 },
-    { name: 'Hourglass', nodes: '5,1,5', columnSpacing: 1.0, rowSpacing: 1.0 },
-    { name: 'Pyramid', nodes: '1,3,5,7', columnSpacing: 1.0, rowSpacing: 1.0 },
-    { name: 'Wave', nodes: '3,5,3,5,3', columnSpacing: 1.0, rowSpacing: 1.0 },
-    { name: 'Funnel', nodes: '7,5,3,1', columnSpacing: 1.0, rowSpacing: 1.0 },
-    { name: 'Bow', nodes: '4,2,4,2,4', columnSpacing: 1.0, rowSpacing: 1.0 },
-    { name: 'Tower', nodes: '1,1,1,1,1,1', columnSpacing: 1.0, rowSpacing: 1.0 },
+    { name: 'Cube', nodes: '5,5,5', columnSpacing: 1.0, rowSpacing: 1.0 },
+    { name: 'Wave', nodes: '1,2,3,7,3,2,1', columnSpacing: 1.0, rowSpacing: 1.0 },
+    { name: 'Pulse', nodes: '1,3,1,7,1,3,1', columnSpacing: 1.0, rowSpacing: 1.0 },
+    { name: 'Bow', nodes: '8,3,8', columnSpacing: 1.0, rowSpacing: 1.0 },
+    { name: 'Grid', nodes: '4,4,4,4', columnSpacing: 1.0, rowSpacing: 1.0 },
+    { name: 'Pinch', nodes: '3,1,3', columnSpacing: 1.0, rowSpacing: 1.0 },
     { name: 'Burst', nodes: '1,8,1', columnSpacing: 1.0, rowSpacing: 1.0 },
 ];
 
@@ -411,20 +411,8 @@ function applyPreset(index) {
 
     activePresetIndex = index;
 
-    // Update nodes input
+    // Update nodes input only - keep other settings as-is
     document.getElementById('nodesInput').value = preset.nodes;
-
-    // Update spacing if preset has custom values
-    if (preset.columnSpacing !== undefined) {
-        document.getElementById('columnSpacing').value = preset.columnSpacing;
-        document.getElementById('columnSpacingValue').textContent = preset.columnSpacing.toFixed(2);
-        updateSliderProgress(document.getElementById('columnSpacing'));
-    }
-    if (preset.rowSpacing !== undefined) {
-        document.getElementById('rowSpacing').value = preset.rowSpacing;
-        document.getElementById('rowSpacingValue').textContent = preset.rowSpacing.toFixed(2);
-        updateSliderProgress(document.getElementById('rowSpacing'));
-    }
 
     // Update preset buttons
     document.querySelectorAll('.preset-btn').forEach((btn, i) => {

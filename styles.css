@@ -1,6 +1,6 @@
 /* ============================================================================
    Tilde Graph Architect - Premium Dark Theme
-   Linear / Raycast / Vercel inspired design
+   Linear / Screen Studio / Arc inspired floating panel design
    ============================================================================ */
 
 /* Custom Fonts */
@@ -29,37 +29,37 @@
 }
 
 :root {
-    /* Core palette */
-    --bg-base: #08090a;
-    --bg-panel: #0d0e10;
-    --bg-elevated: #141517;
-    --bg-input: #1a1b1e;
-    --bg-hover: #222326;
+    /* Core palette - Tilde Brand */
+    --bg-base: #010204;
+    --bg-panel: rgba(16, 17, 19, 0.92);
+    --bg-elevated: #101113;
+    --bg-input: #1a1b1d;
+    --bg-hover: #242628;
 
-    /* Gradient colors from blob */
-    --gradient-dark: #336076;
-    --gradient-mid: #45748C;
-    --gradient-light: #BFE8FE;
+    /* Accent - Tilde gradient blues */
+    --accent: #45748C;
+    --accent-bright: #BFE8FE;
+    --accent-deep: #336076;
+    --accent-dim: rgba(69, 116, 140, 0.25);
+    --accent-glow: rgba(69, 116, 140, 0.5);
+    --accent-glow-bright: rgba(191, 232, 254, 0.3);
 
-    /* Accent - derived from gradient */
-    --accent: var(--gradient-mid);
-    --accent-bright: var(--gradient-light);
-    --accent-dim: rgba(69, 116, 140, 0.15);
-    --accent-glow: rgba(191, 232, 254, 0.25);
+    /* Text - Tilde palette */
+    --text-primary: #F2F2F3;
+    --text-secondary: #AAAAAB;
+    --text-tertiary: #6a6b6d;
+    --text-muted: #494A4C;
 
-    /* Text */
-    --text-primary: #f0f1f2;
-    --text-secondary: #9a9b9e;
-    --text-tertiary: #5c5d60;
-
-    /* Borders */
-    --border-subtle: rgba(255, 255, 255, 0.06);
-    --border-default: rgba(255, 255, 255, 0.1);
-    --border-hover: rgba(255, 255, 255, 0.15);
+    /* Borders - based on #494A4C */
+    --border-subtle: rgba(73, 74, 76, 0.4);
+    --border-default: rgba(73, 74, 76, 0.5);
+    --border-hover: rgba(73, 74, 76, 0.7);
+    --border-panel: rgba(73, 74, 76, 0.5);
 
     /* Layout */
-    --panel-width: 260px;
-    --topbar-height: 56px;
+    --panel-width: 280px;
+    --panel-margin: 24px;
+    --panel-radius: 14px;
 
     /* Spacing */
     --sp-1: 4px;
@@ -104,93 +104,157 @@ body {
 }
 
 /* ============================================================================
-   TOP BAR
+   MAIN LAYOUT - Full canvas with floating panel
    ============================================================================ */
 
-.top-bar {
+.main-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+}
+
+/* ============================================================================
+   FLOATING CONTROL PANEL
+   ============================================================================ */
+
+.control-panel {
     position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
+    top: var(--panel-margin);
+    left: var(--panel-margin);
+    bottom: var(--panel-margin);
+    width: var(--panel-width);
     z-index: 100;
-    height: var(--topbar-height);
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-2);
+    padding: var(--sp-5);
+    background: var(--bg-panel);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--border-panel);
+    border-radius: var(--panel-radius);
+    overflow-y: auto;
+    overflow-x: hidden;
+    box-shadow:
+        0 0 0 1px rgba(0, 0, 0, 0.3),
+        0 8px 40px rgba(0, 0, 0, 0.4),
+        0 2px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* Hide scrollbar but allow scrolling */
+.control-panel {
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE/Edge */
+}
+
+.control-panel::-webkit-scrollbar {
+    display: none; /* Chrome/Safari/Opera */
+}
+
+/* ============================================================================
+   PANEL HEADER WITH LOGO
+   ============================================================================ */
+
+.panel-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0 var(--sp-5);
-    background: rgba(13, 14, 16, 0.85);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
+    padding-bottom: var(--sp-2);
+    margin-bottom: var(--sp-1);
 }
 
-.top-bar-left {
-    flex: 1;
+.logo-wrapper {
     display: flex;
     align-items: center;
+    gap: var(--sp-2);
+}
+
+.logo-icon {
+    width: 16px;
+    height: auto;
+    color: var(--text-primary);
+    flex-shrink: 0;
+    transform: translateY(1px);
 }
 
 .logo {
     font-family: var(--font-display);
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 500;
     color: var(--text-primary);
     letter-spacing: -0.01em;
+    line-height: 1;
 }
 
-.top-bar-center {
+/* ============================================================================
+   STATS BAR - Compact and dimmed
+   ============================================================================ */
+
+.stats-bar {
     display: flex;
     align-items: center;
-    gap: var(--sp-2);
+    gap: var(--sp-3);
+    padding: var(--sp-2) 0;
+    margin-bottom: var(--sp-2);
+    border-bottom: 1px solid var(--border-subtle);
 }
 
-.stat-chip {
+.stat-item {
     display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 6px 12px;
-    background: var(--bg-elevated);
-    border: 1px solid var(--border-subtle);
-    border-radius: 20px;
+    gap: 4px;
     font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: 10px;
 }
 
 .stat-label {
-    color: var(--text-tertiary);
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
 }
 
 .stat-value {
-    color: var(--text-secondary);
+    color: var(--text-tertiary);
     font-variant-numeric: tabular-nums;
 }
 
-.top-bar-right {
-    flex: 1;
-    display: flex;
-    justify-content: flex-end;
-}
+/* ============================================================================
+   EXPORT BUTTON - Accent color with glow
+   ============================================================================ */
 
 .btn-export {
-    display: inline-flex;
+    display: flex;
     align-items: center;
+    justify-content: center;
     gap: var(--sp-2);
-    padding: 8px 16px;
-    background: linear-gradient(135deg, var(--gradient-dark) 0%, var(--gradient-mid) 50%, var(--gradient-light) 100%);
-    color: white;
+    width: 100%;
+    padding: 10px 16px;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-bright) 100%);
+    color: var(--bg-base);
     border: none;
-    border-radius: 8px;
+    border-radius: 10px;
     font-family: var(--font-body);
     font-size: 13px;
-    font-weight: 500;
+    font-weight: 600;
     cursor: pointer;
     transition: all var(--duration-fast) var(--ease-out);
-    box-shadow: 0 1px 2px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.1);
+    box-shadow:
+        0 0 12px rgba(69, 116, 140, 0.25),
+        0 0 24px rgba(69, 116, 140, 0.15),
+        0 1px 2px rgba(0, 0, 0, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    margin-top: auto;
+    margin-bottom: 3px;
 }
 
 .btn-export:hover {
-    background: linear-gradient(135deg, var(--gradient-mid) 0%, var(--gradient-light) 100%);
+    background: linear-gradient(135deg, var(--accent-bright) 0%, #d4f1ff 100%);
     transform: translateY(-1px);
-    box-shadow: 0 4px 16px var(--accent-glow), inset 0 1px 0 rgba(255,255,255,0.2);
+    box-shadow:
+        0 0 16px rgba(191, 232, 254, 0.2),
+        0 0 32px rgba(191, 232, 254, 0.15),
+        0 4px 12px rgba(69, 116, 140, 0.15),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }
 
 .btn-export:active {
@@ -199,52 +263,6 @@ body {
 
 .btn-export svg {
     opacity: 0.9;
-}
-
-/* ============================================================================
-   MAIN LAYOUT
-   ============================================================================ */
-
-.main-container {
-    display: flex;
-    width: 100%;
-    height: 100%;
-    padding-top: var(--topbar-height);
-}
-
-/* ============================================================================
-   CONTROL PANEL
-   ============================================================================ */
-
-.control-panel {
-    width: var(--panel-width);
-    height: calc(100vh - var(--topbar-height));
-    flex-shrink: 0;
-    display: flex;
-    flex-direction: column;
-    gap: var(--sp-2);
-    padding: var(--sp-4);
-    background: var(--bg-panel);
-    overflow-y: auto;
-    overflow-x: hidden;
-}
-
-/* Custom scrollbar */
-.control-panel::-webkit-scrollbar {
-    width: 6px;
-}
-
-.control-panel::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-.control-panel::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.08);
-    border-radius: 3px;
-}
-
-.control-panel::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.12);
 }
 
 /* ============================================================================
@@ -290,8 +308,8 @@ body {
     justify-content: center;
     padding: 4px;
     background: var(--bg-elevated);
-    border: 1px solid var(--border-subtle);
-    border-radius: 8px;
+    border: 1px solid var(--border-default);
+    border-radius: 10px;
     cursor: pointer;
     transition: all var(--duration-fast) var(--ease-out);
     overflow: hidden;
@@ -304,9 +322,11 @@ body {
 }
 
 .preset-btn.active {
-    border-color: var(--gradient-light);
-    background: linear-gradient(135deg, rgba(51, 96, 118, 0.3) 0%, rgba(69, 116, 140, 0.2) 50%, rgba(191, 232, 254, 0.15) 100%);
-    box-shadow: 0 0 0 1px var(--gradient-mid), 0 0 16px var(--accent-glow);
+    border-color: var(--accent);
+    background: var(--accent-dim);
+    box-shadow:
+        0 0 0 1px var(--accent),
+        0 0 16px var(--accent-glow);
 }
 
 .preset-btn svg {
@@ -344,7 +364,7 @@ body {
     padding: 0 var(--sp-3);
     background: var(--bg-input);
     border: 1px solid var(--border-default);
-    border-radius: 6px;
+    border-radius: 8px;
     color: var(--text-primary);
     font-family: var(--font-mono);
     font-size: 13px;
@@ -370,7 +390,7 @@ body {
     justify-content: center;
     background: var(--bg-input);
     border: 1px solid var(--border-default);
-    border-radius: 6px;
+    border-radius: 8px;
     color: var(--text-secondary);
     cursor: pointer;
     transition: all var(--duration-fast) var(--ease-out);
@@ -400,8 +420,8 @@ body {
     font-family: var(--font-mono);
     font-size: 10px;
     font-weight: 500;
-    color: var(--gradient-light);
-    background: linear-gradient(135deg, rgba(51, 96, 118, 0.3) 0%, rgba(69, 116, 140, 0.2) 100%);
+    color: var(--accent-bright);
+    background: var(--accent-dim);
     padding: 3px 8px;
     border-radius: 4px;
 }
@@ -421,9 +441,8 @@ body {
     height: 6px;
     border-radius: 3px;
     background: linear-gradient(90deg,
-        var(--gradient-dark) 0%,
-        var(--gradient-mid) calc(var(--progress, 50%) / 2),
-        var(--gradient-light) var(--progress, 50%),
+        var(--accent) 0%,
+        var(--accent) var(--progress, 50%),
         var(--bg-hover) var(--progress, 50%));
 }
 
@@ -433,16 +452,16 @@ body {
     width: 16px;
     height: 16px;
     margin-top: -5px;
-    background: linear-gradient(135deg, var(--gradient-light) 0%, var(--gradient-mid) 100%);
+    background: var(--accent-bright);
     border-radius: 50%;
     cursor: pointer;
     transition: all var(--duration-fast) var(--ease-out);
-    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
 }
 
 .slider::-webkit-slider-thumb:hover {
     transform: scale(1.15);
-    box-shadow: 0 0 0 4px var(--accent-dim), 0 2px 8px rgba(0,0,0,0.3);
+    box-shadow: 0 0 0 4px var(--accent-dim), 0 0 12px var(--accent-glow);
 }
 
 .slider::-moz-range-track {
@@ -454,13 +473,13 @@ body {
 .slider::-moz-range-progress {
     height: 6px;
     border-radius: 3px;
-    background: linear-gradient(90deg, var(--gradient-dark) 0%, var(--gradient-mid) 50%, var(--gradient-light) 100%);
+    background: var(--accent);
 }
 
 .slider::-moz-range-thumb {
     width: 16px;
     height: 16px;
-    background: linear-gradient(135deg, var(--gradient-light) 0%, var(--gradient-mid) 100%);
+    background: var(--accent-bright);
     border: none;
     border-radius: 50%;
     cursor: pointer;
@@ -487,7 +506,7 @@ body {
     padding: 3px;
     background: var(--bg-input);
     border: 1px solid var(--border-default);
-    border-radius: 6px;
+    border-radius: 8px;
     cursor: pointer;
     transition: all var(--duration-fast) var(--ease-out);
 }
@@ -502,7 +521,7 @@ body {
 
 .color-chip::-webkit-color-swatch {
     border: none;
-    border-radius: 3px;
+    border-radius: 4px;
 }
 
 .color-hex {
@@ -512,7 +531,7 @@ body {
     padding: 0 var(--sp-3);
     background: var(--bg-input);
     border: 1px solid var(--border-default);
-    border-radius: 6px;
+    border-radius: 8px;
     color: var(--text-primary);
     font-family: var(--font-mono);
     font-size: 11px;
@@ -535,7 +554,7 @@ body {
    ============================================================================ */
 
 .collapsible-section {
-    margin-top: var(--sp-3);
+    margin-top: 10px;
 }
 
 .section-header {
@@ -545,8 +564,8 @@ body {
     width: 100%;
     padding: var(--sp-2) var(--sp-3);
     background: var(--bg-elevated);
-    border: 1px solid var(--border-subtle);
-    border-radius: 6px;
+    border: 1px solid var(--border-default);
+    border-radius: 8px;
     color: var(--text-secondary);
     font-size: 12px;
     font-weight: 500;
@@ -660,8 +679,8 @@ body {
     width: 100%;
     padding: var(--sp-2) var(--sp-3);
     background: var(--bg-elevated);
-    border: 1px solid var(--border-subtle);
-    border-radius: 6px;
+    border: 1px solid var(--border-default);
+    border-radius: 8px;
     color: var(--text-secondary);
     font-family: var(--font-body);
     font-size: 12px;
@@ -682,17 +701,20 @@ body {
 }
 
 /* ============================================================================
-   CANVAS AREA - THE HERO
+   CANVAS AREA - Full screen behind floating panel
    ============================================================================ */
 
 .canvas-area {
-    flex: 1;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
     display: flex;
     align-items: center;
     justify-content: center;
-    min-width: 0;
-    min-height: 0;
     padding: var(--sp-8);
+    padding-left: calc(var(--panel-width) + var(--panel-margin) * 2 + var(--sp-8));
     background: var(--bg-base);
     transition: background-color 200ms ease;
 }
@@ -715,7 +737,7 @@ body {
 
 .preview svg {
     max-width: 100%;
-    max-height: calc(100vh - var(--topbar-height) - var(--sp-8) * 2);
+    max-height: calc(100vh - var(--sp-8) * 2);
     width: auto;
     height: auto;
     transition: all 200ms ease;
@@ -727,34 +749,39 @@ body {
 
 @media (max-width: 900px) {
     :root {
-        --panel-width: 240px;
-    }
-
-    .top-bar-center {
-        display: none;
+        --panel-width: 260px;
+        --panel-margin: 12px;
     }
 
     .canvas-area {
         padding: var(--sp-5);
+        padding-left: calc(var(--panel-width) + var(--panel-margin) * 2 + var(--sp-5));
     }
 }
 
 @media (max-width: 700px) {
-    .main-container {
-        flex-direction: column;
+    :root {
+        --panel-margin: 0;
+        --panel-radius: 0;
     }
 
     .control-panel {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: auto;
         width: 100%;
-        height: auto;
-        max-height: 45vh;
-        border-right: none;
-        border-bottom: 1px solid var(--border-subtle);
+        max-height: 50vh;
+        border-radius: 0;
+        border: none;
+        border-bottom: 1px solid var(--border-panel);
     }
 
     .canvas-area {
-        flex: 1;
-        min-height: 0;
+        padding: var(--sp-5);
+        padding-left: var(--sp-5);
+        padding-top: calc(50vh + var(--sp-5));
     }
 
     .presets-grid {
@@ -784,3 +811,8 @@ body {
 .panel-section:nth-child(1) { animation-delay: 0ms; }
 .panel-section:nth-child(2) { animation-delay: 60ms; }
 .panel-section:nth-child(3) { animation-delay: 120ms; }
+
+/* Hide old top bar elements (now moved to sidebar) */
+.top-bar {
+    display: none;
+}

@@ -7,38 +7,21 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <!-- Top Bar -->
-    <header class="top-bar">
-        <div class="top-bar-left">
-            <span class="logo">Tilde Graph Architect</span>
-        </div>
-        <div class="top-bar-center">
-            <div class="stat-chip">
-                <span class="stat-label">Nodes</span>
-                <span class="stat-value" id="statNodes">15</span>
-            </div>
-            <div class="stat-chip">
-                <span class="stat-label">Edges</span>
-                <span class="stat-value" id="statEdges">50</span>
-            </div>
-            <div class="stat-chip">
-                <span class="stat-label">Intersections</span>
-                <span class="stat-value" id="statIntersections">24</span>
-            </div>
-        </div>
-        <div class="top-bar-right">
-            <button class="btn-export" id="downloadBtn">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                    <path d="M8 1v9M8 10L4.5 6.5M8 10l3.5-3.5M2 12v2h12v-2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-                Export SVG
-            </button>
-        </div>
-    </header>
-
     <div class="main-container">
-        <!-- Control Panel -->
+        <!-- Floating Control Panel -->
         <aside class="control-panel">
+            <!-- Panel Header with Logo -->
+            <div class="panel-header">
+                <div class="logo-wrapper">
+                    <svg class="logo-icon" width="32" height="33" viewBox="0 0 32 33" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M22.5974 16.622L29.1731 12.3661C29.9459 11.8657 30.9773 12.0864 31.4778 12.8592C31.9783 13.6321 31.7575 14.6634 30.9847 15.1639L23.0434 20.3074L9.51873 15.5994L2.53941 19.8856C1.75499 20.3672 0.728809 20.122 0.246857 19.3378C-0.234923 18.5532 0.00994126 17.5256 0.794582 17.0438L9.12273 11.9307L22.5974 16.622Z" fill="currentColor"/>
+                        <path d="M22.5974 4.69132L29.1731 0.435449C29.9459 -0.0650095 30.9773 0.155741 31.4778 0.928553C31.9783 1.70141 31.7575 2.73278 30.9847 3.23325L23.0434 8.3767L9.51873 3.66869L2.53941 7.95491C1.75499 8.43655 0.728809 8.19129 0.246857 7.40718C-0.234923 6.62254 0.00994126 5.59489 0.794582 5.11311L9.12273 0L22.5974 4.69132Z" fill="currentColor"/>
+                        <path d="M22.5974 28.5536L29.1731 24.2978C29.9459 23.7973 30.9773 24.018 31.4778 24.7909C31.9783 25.5637 31.7575 26.5951 30.9847 27.0955L23.0434 32.239L9.51873 27.531L2.53941 31.8172C1.75499 32.2989 0.728809 32.0536 0.246857 31.2695C-0.234923 30.4848 0.00994126 29.4572 0.794582 28.9754L9.12273 23.8623L22.5974 28.5536Z" fill="currentColor"/>
+                    </svg>
+                    <span class="logo">Tilde Graph Architect</span>
+                </div>
+            </div>
+
             <!-- Presets Section -->
             <section class="panel-section presets-section">
                 <h2 class="section-title">Presets</h2>
@@ -156,6 +139,14 @@
                     <button class="btn-secondary" id="resetBtn">Reset to Default</button>
                 </div>
             </section>
+
+            <!-- Export Button - At bottom of sidebar -->
+            <button class="btn-export" id="downloadBtn">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                    <path d="M8 1v9M8 10L4.5 6.5M8 10l3.5-3.5M2 12v2h12v-2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                Export SVG
+            </button>
         </aside>
 
         <!-- Canvas Area -->
