@@ -45,8 +45,8 @@ const presets = [
     { name: 'Pulse', nodes: '1,3,1,7,1,3,1', columnSpacing: 1.0, rowSpacing: 1.0 },
     { name: 'Bow', nodes: '8,3,8', columnSpacing: 1.0, rowSpacing: 1.0 },
     { name: 'Grid', nodes: '4,4,4,4', columnSpacing: 1.0, rowSpacing: 1.0 },
-    { name: 'Pinch', nodes: '3,1,3', columnSpacing: 1.0, rowSpacing: 1.0 },
-    { name: 'Burst', nodes: '1,8,1', columnSpacing: 1.0, rowSpacing: 1.0 },
+    { name: 'Horizon', nodes: '1,2,3,5,3,2,1,2,1', columnSpacing: 1.0, rowSpacing: 1.0 },
+    { name: 'Burst', nodes: '1,7,1', columnSpacing: 1.0, rowSpacing: 1.0 },
 ];
 
 // ============================================================================
@@ -64,14 +64,14 @@ function parseNodesPerColumn(inputStr) {
     const parts = inputStr.split(',').map(s => s.trim()).filter(s => s !== '');
     const nums = parts.map(s => {
         const n = parseInt(s, 10);
-        return isNaN(n) ? 0 : Math.max(1, Math.min(8, n));
+        return isNaN(n) ? 0 : Math.max(1, Math.min(9, n));
     }).filter(n => n > 0);
 
     if (nums.length === 0) {
         return [1, 5, 3, 5, 1];
     }
 
-    const clamped = nums.slice(0, 7);
+    const clamped = nums.slice(0, 9);
     if (clamped.length < 2) {
         while (clamped.length < 2) {
             clamped.push(1);
@@ -487,10 +487,10 @@ function applyPreset(index) {
  * Generate random nodes configuration
  */
 function randomizeNodes() {
-    const numColumns = Math.floor(Math.random() * 4) + 3; // 3-6 columns
+    const numColumns = Math.floor(Math.random() * 7) + 3; // 3-9 columns
     const nodes = [];
     for (let i = 0; i < numColumns; i++) {
-        nodes.push(Math.floor(Math.random() * 7) + 1); // 1-7 nodes
+        nodes.push(Math.floor(Math.random() * 9) + 1); // 1-9 nodes
     }
     getControl('nodesInput').value = nodes.join(',');
 
@@ -501,6 +501,86 @@ function randomizeNodes() {
     });
 
     scheduleRender();
+}
+
+// ============================================================================
+// Showcase Mode - Hidden feature for recording demos (press 'D' to trigger)
+// ============================================================================
+
+let showcaseRunning = false;
+
+// Curated sequence - all shapes share a center point for smooth morphing
+const showcaseSequence = [
+    '1,3,5,3,1',          // Small diamond
+    '1,5,9,5,1',          // Big diamond
+    '1,3,5,7,5,3,1',      // Tall diamond
+    '1,7,1,7,1',          // Bow tie
+    '1,5,1,5,1',          // Small bow
+    '1,9,1',              // Burst
+    '1,3,5,3,1',          // Back to small diamond
+];
+
+/**
+ * Compute node positions for morphing
+ */
+function getNodePositions(nodesPerColumnStr) {
+    const nodesPerColumn = parseNodesPerColumn(nodesPerColumnStr);
+    const positions = [];
+    const innerWidth = config.svgWidth - config.marginLeft - config.marginRight;
+    const innerHeight = config.svgHeight - config.marginTop - config.marginBottom;
+
+    nodesPerColumn.forEach((nodeCount, colIndex) => {
+        const spacingFraction = nodesPerColumn.length > 1
+            ? (colIndex / (nodesPerColumn.length - 1)) * config.columnSpacing
+            : 0;
+        const colX = config.marginLeft + spacingFraction * innerWidth;
+
+        for (let rowIndex = 0; rowIndex < nodeCount; rowIndex++) {
+            let nodeY;
+            if (nodeCount === 1) {
+                nodeY = config.svgHeight / 2;
+            } else {
+                const fraction = rowIndex / (nodeCount - 1);
+                nodeY = config.marginTop + fraction * config.rowSpacing * innerHeight;
+            }
+            // Store normalized position for matching
+            const colFrac = nodesPerColumn.length > 1 ? colIndex / (nodesPerColumn.length - 1) : 0.5;
+            const rowFrac = nodeCount > 1 ? rowIndex / (nodeCount - 1) : 0.5;
+            positions.push({ x: colX, y: nodeY, colFrac, rowFrac });
+        }
+    });
+    return positions;
+}
+
+/**
+ * Start showcase mode - instant cuts through all 8 presets
+ */
+function startShowcase() {
+    if (showcaseRunning) return;
+    showcaseRunning = true;
+
+    // Use default settings
+    resetToDefaults();
+    readControlsToConfig();
+
+    const holdDuration = 225;      // ms to hold each state
+    let currentStep = 0;
+
+    function showStep() {
+        // Loop back to first preset after going through all
+        if (currentStep > presets.length) {
+            showcaseRunning = false;
+            return;
+        }
+
+        // Instant switch - apply preset (handles button state + glow)
+        applyPreset(currentStep % presets.length);
+
+        currentStep++;
+        setTimeout(showStep, holdDuration);
+    }
+
+    showStep();
 }
 
 /**
@@ -708,6 +788,15 @@ function initializeGenerator() {
             fullscreenButton.title = isFullscreen ? 'Exit full screen' : 'Full screen';
         });
     }
+
+    // Showcase mode - press 'D' to trigger demo animation
+    document.addEventListener('keydown', (e) => {
+        if ((e.key === 'd' || e.key === 'D') && !e.ctrlKey && !e.metaKey && !e.altKey) {
+            // Don't trigger if typing in an input
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+            startShowcase();
+        }
+    });
 
     // Initialize with defaults
     resetToDefaults();

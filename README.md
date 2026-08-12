@@ -49,7 +49,7 @@ Tilde Graph Architect visualizes complete bipartite graphs with multiple layers.
 **Nodes per column** (text input)
 - Format: comma-separated integers, e.g., `1,5,6`
 - Each number specifies how many nodes appear in that column
-- Clamped to: 2–7 columns, 1–8 nodes per column
+- Clamped to: 2–9 columns, 1–9 nodes per column
 - Default: `1,5,3,5,1`
 - Invalid entries are skipped; if fewer than 2 valid entries, defaults are used
 
