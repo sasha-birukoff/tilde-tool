@@ -475,6 +475,7 @@ function applyPreset(index) {
     activePresetIndex = index;
 
     baseNodesPattern = preset.nodes;
+    syncDimensionsToPattern();
     updateNodesFromPattern();
     syncPresetButtons();
 
@@ -489,12 +490,43 @@ function syncPresetButtons() {
     });
 }
 
+function syncDimensionsToPattern() {
+    const pattern = parseNodesPerColumn(baseNodesPattern);
+    const columnCount = getControl('columnCount');
+    const rowCount = getControl('rowCount');
+    const columns = pattern.length;
+    const rows = Math.max(...pattern);
+
+    columnCount.value = String(columns);
+    rowCount.value = String(rows);
+    getControl('columnCountValue').textContent = String(columns);
+    getControl('rowCountValue').textContent = String(rows);
+    updateSliderProgress(columnCount);
+    updateSliderProgress(rowCount);
+}
+
 function updateNodesFromPattern() {
-    const complexity = parseInt(getControl('complexity').value, 10) || 5;
-    const factor = 0.5 + ((complexity - 1) / 8);
-    const scaled = parseNodesPerColumn(baseNodesPattern).map((count) => {
-        if (count === 1) return 1;
-        return Math.max(1, Math.min(9, Math.round(count * factor)));
+    const basePattern = parseNodesPerColumn(baseNodesPattern);
+    const targetColumns = parseInt(getControl('columnCount').value, 10) || basePattern.length;
+    const targetRows = parseInt(getControl('rowCount').value, 10) || Math.max(...basePattern);
+    const sampled = [];
+
+    for (let index = 0; index < targetColumns; index++) {
+        const position = targetColumns === 1
+            ? 0
+            : (index / (targetColumns - 1)) * (basePattern.length - 1);
+        const leftIndex = Math.floor(position);
+        const rightIndex = Math.min(basePattern.length - 1, Math.ceil(position));
+        const mix = position - leftIndex;
+        const count = basePattern[leftIndex] + ((basePattern[rightIndex] - basePattern[leftIndex]) * mix);
+        sampled.push(Math.max(1, Math.round(count)));
+    }
+
+    const sampledMax = Math.max(...sampled);
+    const scaled = sampled.map((count) => {
+        if (count <= 1 || sampledMax <= 1) return 1;
+        const normalized = (count - 1) / (sampledMax - 1);
+        return 1 + Math.round(normalized * (targetRows - 1));
     });
 
     getControl('nodesInput').value = scaled.join(',');
@@ -504,10 +536,11 @@ function updateNodesFromPattern() {
  * Generate random nodes configuration
  */
 function randomizeNodes() {
-    const numColumns = Math.floor(Math.random() * 7) + 3; // 3-9 columns
+    const numColumns = parseInt(getControl('columnCount').value, 10) || 5;
+    const maxRows = parseInt(getControl('rowCount').value, 10) || 5;
     const nodes = [];
     for (let i = 0; i < numColumns; i++) {
-        nodes.push(Math.floor(Math.random() * 9) + 1); // 1-9 nodes
+        nodes.push(Math.floor(Math.random() * maxRows) + 1);
     }
     baseNodesPattern = nodes.join(',');
     updateNodesFromPattern();
@@ -604,8 +637,11 @@ function startShowcase() {
 function resetToDefaults() {
     baseNodesPattern = '1,5,3,5,1';
 
-    getControl('complexity').value = 5;
-    getControl('complexityValue').textContent = '5';
+    getControl('columnCount').value = 5;
+    getControl('columnCountValue').textContent = '5';
+
+    getControl('rowCount').value = 5;
+    getControl('rowCountValue').textContent = '5';
 
     getControl('columnSpacing').value = 1.0;
     getControl('columnSpacingValue').textContent = '1.00';
@@ -703,7 +739,8 @@ function initializeGenerator() {
 
     // Map of slider IDs to their value display IDs
     const sliderValueMap = {
-        'complexity': 'complexityValue',
+        'columnCount': 'columnCountValue',
+        'rowCount': 'rowCountValue',
         'columnSpacing': 'columnSpacingValue',
         'rowSpacing': 'rowSpacingValue',
         'nodeBaseSize': 'nodeBaseSizeValue'
@@ -720,40 +757,17 @@ function initializeGenerator() {
 
             slider.addEventListener('input', (e) => {
                 const value = parseFloat(e.target.value);
-                valueDisplay.textContent = sliderId === 'complexity'
+                valueDisplay.textContent = sliderId === 'columnCount' || sliderId === 'rowCount'
                     ? String(Math.round(value))
                     : sliderId === 'nodeBaseSize'
                         ? value.toFixed(value % 1 === 0 ? 0 : 1)
                         : value.toFixed(2);
                 updateSliderProgress(slider);
-                if (sliderId === 'complexity') updateNodesFromPattern();
+                if (sliderId === 'columnCount' || sliderId === 'rowCount') updateNodesFromPattern();
                 scheduleRender();
             });
         }
     });
-
-    const fullscreenButton = generatorRoot.querySelector('[data-action="fullscreen"]');
-    if (!generatorRoot.requestFullscreen) {
-        fullscreenButton.hidden = true;
-    } else {
-        fullscreenButton.addEventListener('click', async () => {
-            try {
-                if (document.fullscreenElement === generatorRoot) {
-                    await document.exitFullscreen();
-                } else {
-                    await generatorRoot.requestFullscreen();
-                }
-            } catch (error) {
-                showToast('Full screen is unavailable in this browser');
-            }
-        });
-
-        document.addEventListener('fullscreenchange', () => {
-            const isFullscreen = document.fullscreenElement === generatorRoot;
-            fullscreenButton.setAttribute('aria-label', isFullscreen ? 'Exit full screen' : 'Enter full screen');
-            fullscreenButton.title = isFullscreen ? 'Exit full screen' : 'Full screen';
-        });
-    }
 
     // Showcase mode - press 'D' to trigger demo animation
     document.addEventListener('keydown', (e) => {

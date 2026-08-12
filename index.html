@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="theme-color" content="#050607">
+    <meta name="theme-color" content="#0B0B0C">
     <meta name="description" content="An interactive graph system for Tilde Research.">
     <title>Tilde Research — Graph Architect</title>
     <link rel="icon" type="image/png" href="favicon.png">
@@ -23,9 +23,15 @@
 
             <section class="panel-section" aria-label="Graph structure">
                 <div class="control-group control-row">
-                    <label class="control-label" for="complexity">Complexity</label>
-                    <input type="range" id="complexity" class="slider" min="1" max="9" step="1" value="5">
-                    <output class="value-output" id="complexityValue" for="complexity">5</output>
+                    <label class="control-label" for="columnCount">Columns</label>
+                    <input type="range" id="columnCount" class="slider" min="3" max="9" step="1" value="5">
+                    <output class="value-output" id="columnCountValue" for="columnCount">5</output>
+                </div>
+
+                <div class="control-group control-row">
+                    <label class="control-label" for="rowCount">Rows</label>
+                    <input type="range" id="rowCount" class="slider" min="2" max="9" step="1" value="5">
+                    <output class="value-output" id="rowCountValue" for="rowCount">5</output>
                 </div>
 
                 <div class="control-group control-row">
@@ -66,14 +72,6 @@
 
         <div class="chrome-actions">
             <span class="live-badge"><span class="live-dot" aria-hidden="true"></span>Interactive</span>
-            <button class="icon-button fullscreen-button" type="button" data-action="fullscreen" aria-label="Enter full screen" title="Full screen">
-                <svg class="fullscreen-enter" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                    <path d="M6 2H2v4M10 2h4v4M6 14H2v-4M10 14h4v-4" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-                <svg class="fullscreen-exit" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                    <path d="M2 6h4V2M14 6h-4V2M2 10h4v4M14 10h-4v4" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-            </button>
         </div>
 
         <div class="preset-drawer" data-preset-drawer hidden>
