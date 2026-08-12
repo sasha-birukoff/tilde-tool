@@ -1,6 +1,6 @@
 # Tilde Graph Architect
 
-A pure HTML/CSS/JavaScript static web app for generating abstract layered bipartite graphs as SVG.
+A responsive, client-side identity tool for generating Tilde Research's layered graph assets as SVG.
 
 ## Overview
 
@@ -14,6 +14,8 @@ Tilde Graph Architect visualizes complete bipartite graphs with multiple layers.
 - **Customizable colors**: Line, node, and intersection colors independently configurable
 - **SVG export**: Download the generated graph as a transparent SVG file
 - **Real-time preview**: See changes instantly as you adjust parameters
+- **Curated structures**: Start from eight graph presets or generate a random topology
+- **Presentation-ready UI**: Responsive controls, live graph statistics, and full-screen mode
 
 ## Getting Started
 
@@ -47,8 +49,8 @@ Tilde Graph Architect visualizes complete bipartite graphs with multiple layers.
 **Nodes per column** (text input)
 - Format: comma-separated integers, e.g., `1,5,6`
 - Each number specifies how many nodes appear in that column
-- Clamped to: 2–6 columns, 1–8 nodes per column
-- Default: `1,5,6`
+- Clamped to: 2–7 columns, 1–8 nodes per column
+- Default: `1,5,3,5,1`
 - Invalid entries are skipped; if fewer than 2 valid entries, defaults are used
 
 **Column spacing** (number input)
@@ -79,25 +81,25 @@ Tilde Graph Architect visualizes complete bipartite graphs with multiple layers.
 
 **Line color** (color picker)
 - RGB color of the edge lines
-- Default: `#939393` (medium gray)
+- Default: `#F3F3F4`
 
 ### Node Sizing
 
 **Node base size** (number input)
 - Minimum size of node squares (in SVG units)
 - Range: 0.5 to 20
-- Default: 2
+- Default: 8
 
 **Node scale k** (number input)
 - Multiplier applied per unit of node degree
 - Size formula: `baseSize + k × degree`
 - Higher values = larger nodes for high-degree nodes
 - Range: 0 to 5
-- Default: 0.4
+- Default: 1
 
 **Node color** (color picker)
 - RGB color of node endpoint squares and intersections
-- Default: `#939393` (medium gray)
+- Default: `#F3F3F4`
 
 **Show edge nodes** (checkbox)
 - When **checked** (default): draws node squares at all endpoints
@@ -108,8 +110,8 @@ Tilde Graph Architect visualizes complete bipartite graphs with multiple layers.
 ### Intersection Visualization
 
 Intersections are automatically sized based on the node sizing controls for visual consistency:
-- **Intersection base size** = `nodeBaseSize + nodeScaleK` (smallest intersection = smallest node + 1× node scale)
-- **Intersection scale** = same as `nodeScaleK` (scales with intersection count)
+- **Intersection size** = `nodeBaseSize + nodeScaleK × crossing count`
+- **Intersection scale** = same as `nodeScaleK`
 - Intersections use the same color as nodes
 
 **Intersection merge tolerance** (number input)
@@ -126,7 +128,7 @@ Intersections are automatically sized based on the node sizing controls for visu
 - Sets the CSS background of the preview container
 - Applied only to the on-screen preview, **not** to the exported SVG
 - Exported SVG is always transparent
-- Default: `#000000` (black)
+- Default: `#050607`
 
 ### Actions
 
@@ -215,4 +217,3 @@ Change the `value` attributes to customize initial state.
 ## License
 
 Open source. Use freely.
-

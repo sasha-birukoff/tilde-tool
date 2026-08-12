@@ -1,3 +1,6 @@
+(function () {
+'use strict';
+
 // ============================================================================
 // Tilde Graph Architect - Pure JavaScript Graph Visualization
 // ============================================================================
@@ -19,12 +22,20 @@ const config = {
     nodeColor: '#F3F3F4',
     mergeTolerance: 1,
     showEdgeNodes: true,
-    bgColor: '#010204',
+    bgColor: '#050607',
 };
 
 let lastSvg = '';
 let lastStats = { nodes: 0, edges: 0, intersections: 0 };
 let activePresetIndex = 0;
+let generatorRoot = null;
+let scheduledRender = null;
+let renderAnimationTimer = null;
+let toastTimer = null;
+
+function getControl(id) {
+    return generatorRoot.querySelector(`[id="${id}"]`);
+}
 
 // Preset configurations
 const presets = [
@@ -74,18 +85,23 @@ function parseNodesPerColumn(inputStr) {
  * Read all control inputs and update config object
  */
 function readControlsToConfig() {
-    const nodesInput = document.getElementById('nodesInput').value;
+    const nodesInput = getControl('nodesInput').value;
 
-    config.columnSpacing = parseFloat(document.getElementById('columnSpacing').value) || 1.0;
-    config.rowSpacing = parseFloat(document.getElementById('rowSpacing').value) || 1.0;
-    config.lineThickness = parseFloat(document.getElementById('lineThickness').value) || 0.5;
-    config.nodeBaseSize = parseFloat(document.getElementById('nodeBaseSize').value) || 2;
-    config.nodeScaleK = parseFloat(document.getElementById('nodeScaleK').value) || 0.4;
-    config.mergeTolerance = parseFloat(document.getElementById('mergeTolerance').value) || 1;
-    config.showEdgeNodes = document.getElementById('showEdgeNodes').checked;
-    config.lineColor = document.getElementById('lineColor').value;
-    config.nodeColor = document.getElementById('nodeColor').value;
-    config.bgColor = document.getElementById('bgColor').value;
+    const readNumber = (id, fallback) => {
+        const value = parseFloat(getControl(id).value);
+        return Number.isFinite(value) ? value : fallback;
+    };
+
+    config.columnSpacing = readNumber('columnSpacing', 1.0);
+    config.rowSpacing = readNumber('rowSpacing', 1.0);
+    config.lineThickness = readNumber('lineThickness', 0.5);
+    config.nodeBaseSize = readNumber('nodeBaseSize', 8);
+    config.nodeScaleK = readNumber('nodeScaleK', 1);
+    config.mergeTolerance = readNumber('mergeTolerance', 1);
+    config.showEdgeNodes = getControl('showEdgeNodes').checked;
+    config.lineColor = getControl('lineColor').value;
+    config.nodeColor = getControl('nodeColor').value;
+    config.bgColor = getControl('bgColor').value;
 
     config.nodesPerColumn = parseNodesPerColumn(nodesInput);
 }
@@ -289,8 +305,7 @@ function buildSvg(nodes, edges, intersections, cfg) {
     }
 
     for (const inter of intersections) {
-        const interBaseSize = cfg.nodeBaseSize + cfg.nodeScaleK;
-        const size = interBaseSize + cfg.nodeScaleK * inter.count;
+        const size = cfg.nodeBaseSize + cfg.nodeScaleK * inter.count;
         const half = size / 2;
         minX = Math.min(minX, inter.x - half);
         maxX = Math.max(maxX, inter.x + half);
@@ -307,7 +322,7 @@ function buildSvg(nodes, edges, intersections, cfg) {
     const width = maxX - minX;
     const height = maxY - minY;
 
-    const svg = `<svg width="${width}" height="${height}" viewBox="${minX} ${minY} ${width} ${height}" xmlns="http://www.w3.org/2000/svg">
+    const svg = `<svg width="${width}" height="${height}" viewBox="${minX} ${minY} ${width} ${height}" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false" shape-rendering="geometricPrecision">
 ${svgContent}
 </svg>`;
 
@@ -344,7 +359,7 @@ function generatePresetPreview(nodesStr) {
     for (let i = 0; i < columns.length - 1; i++) {
         for (const n1 of columns[i]) {
             for (const n2 of columns[i + 1]) {
-                svgContent += `<line x1="${n1.x}" y1="${n1.y}" x2="${n2.x}" y2="${n2.y}" stroke="rgba(69, 116, 140, 0.6)" stroke-width="0.75"/>`;
+                svgContent += `<line x1="${n1.x}" y1="${n1.y}" x2="${n2.x}" y2="${n2.y}" stroke="currentColor" stroke-opacity="0.42" stroke-width="0.65"/>`;
             }
         }
     }
@@ -352,7 +367,7 @@ function generatePresetPreview(nodesStr) {
     // Draw nodes with light gradient color
     for (const col of columns) {
         for (const n of col) {
-            svgContent += `<circle cx="${n.x}" cy="${n.y}" r="2" fill="#BFE8FE"/>`;
+            svgContent += `<rect x="${n.x - 1.5}" y="${n.y - 1.5}" width="3" height="3" fill="currentColor"/>`;
         }
     }
 
@@ -363,9 +378,18 @@ function generatePresetPreview(nodesStr) {
  * Update stats display
  */
 function updateStats(nodeCount, edgeCount, intersectionCount) {
-    document.getElementById('statNodes').textContent = nodeCount;
-    document.getElementById('statEdges').textContent = edgeCount;
-    document.getElementById('statIntersections').textContent = intersectionCount;
+    const formatter = new Intl.NumberFormat('en-US');
+    const values = {
+        nodes: nodeCount,
+        edges: edgeCount,
+        intersections: intersectionCount,
+    };
+
+    Object.entries(values).forEach(([key, value]) => {
+        const output = generatorRoot.querySelector(`[data-stat="${key}"]`);
+        if (output) output.textContent = formatter.format(value);
+    });
+
     lastStats = { nodes: nodeCount, edges: edgeCount, intersections: intersectionCount };
 }
 
@@ -392,14 +416,50 @@ function render() {
 
     lastSvg = buildSvg(nodes, edges, intersections, config);
 
-    const preview = document.getElementById('preview');
+    const preview = generatorRoot.querySelector('[data-preview]');
     preview.innerHTML = lastSvg;
 
     // Apply background to the entire canvas area (not included in SVG export)
-    document.querySelector('.canvas-area').style.backgroundColor = config.bgColor;
+    generatorRoot.querySelector('.canvas-area').style.backgroundColor = config.bgColor;
 
     // Update stats
     updateStats(nodes.length, edges.length, intersections.length);
+}
+
+function scheduleRender() {
+    if (scheduledRender) return;
+
+    scheduledRender = requestAnimationFrame(() => {
+        scheduledRender = null;
+        render();
+    });
+}
+
+function regenerate() {
+    const preview = generatorRoot.querySelector('[data-preview]');
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    window.clearTimeout(renderAnimationTimer);
+    if (reduceMotion) {
+        render();
+        return;
+    }
+
+    preview.classList.add('is-rendering');
+    renderAnimationTimer = window.setTimeout(() => {
+        render();
+        requestAnimationFrame(() => preview.classList.remove('is-rendering'));
+    }, 110);
+}
+
+function showToast(message) {
+    const toast = generatorRoot.querySelector('[data-toast]');
+    if (!toast) return;
+
+    window.clearTimeout(toastTimer);
+    toast.textContent = message;
+    toast.classList.add('is-visible');
+    toastTimer = window.setTimeout(() => toast.classList.remove('is-visible'), 1800);
 }
 
 /**
@@ -412,14 +472,15 @@ function applyPreset(index) {
     activePresetIndex = index;
 
     // Update nodes input only - keep other settings as-is
-    document.getElementById('nodesInput').value = preset.nodes;
+    getControl('nodesInput').value = preset.nodes;
 
     // Update preset buttons
-    document.querySelectorAll('.preset-btn').forEach((btn, i) => {
-        btn.classList.toggle('active', i === index);
+    generatorRoot.querySelectorAll('.preset-button').forEach((btn, i) => {
+        btn.classList.toggle('is-active', i === index);
+        btn.setAttribute('aria-pressed', String(i === index));
     });
 
-    render();
+    scheduleRender();
 }
 
 /**
@@ -431,51 +492,53 @@ function randomizeNodes() {
     for (let i = 0; i < numColumns; i++) {
         nodes.push(Math.floor(Math.random() * 7) + 1); // 1-7 nodes
     }
-    document.getElementById('nodesInput').value = nodes.join(',');
+    getControl('nodesInput').value = nodes.join(',');
 
     // Clear active preset
-    document.querySelectorAll('.preset-btn').forEach(btn => btn.classList.remove('active'));
+    generatorRoot.querySelectorAll('.preset-button').forEach(btn => {
+        btn.classList.remove('is-active');
+        btn.setAttribute('aria-pressed', 'false');
+    });
 
-    render();
+    scheduleRender();
 }
 
 /**
  * Reset all controls to default values
  */
 function resetToDefaults() {
-    document.getElementById('nodesInput').value = '1,5,3,5,1';
+    getControl('nodesInput').value = '1,5,3,5,1';
 
-    document.getElementById('columnSpacing').value = 1.0;
-    document.getElementById('columnSpacingValue').textContent = '1.00';
+    getControl('columnSpacing').value = 1.0;
+    getControl('columnSpacingValue').textContent = '1.00';
 
-    document.getElementById('rowSpacing').value = 1.0;
-    document.getElementById('rowSpacingValue').textContent = '1.00';
+    getControl('rowSpacing').value = 1.0;
+    getControl('rowSpacingValue').textContent = '1.00';
 
-    document.getElementById('lineThickness').value = 0.5;
-    document.getElementById('lineThicknessValue').textContent = '0.50';
+    getControl('lineThickness').value = 0.5;
+    getControl('lineThicknessValue').textContent = '0.50';
 
-    document.getElementById('nodeBaseSize').value = 8.0;
-    document.getElementById('nodeBaseSizeValue').textContent = '8.00';
+    getControl('nodeBaseSize').value = 8.0;
+    getControl('nodeBaseSizeValue').textContent = '8.00';
 
-    document.getElementById('nodeScaleK').value = 1.0;
-    document.getElementById('nodeScaleKValue').textContent = '1.00';
+    getControl('nodeScaleK').value = 1.0;
+    getControl('nodeScaleKValue').textContent = '1.00';
 
-    document.getElementById('mergeTolerance').value = 1;
-    document.getElementById('mergeToleranceValue').textContent = '1.00';
+    getControl('mergeTolerance').value = 1;
+    getControl('mergeToleranceValue').textContent = '1.00';
 
-    document.getElementById('showEdgeNodes').checked = true;
+    getControl('showEdgeNodes').checked = true;
 
-    document.getElementById('lineColor').value = '#F3F3F4';
-    document.getElementById('lineColorHex').value = '#F3F3F4';
+    getControl('lineColor').value = '#F3F3F4';
+    getControl('nodeColor').value = '#F3F3F4';
+    getControl('bgColor').value = '#050607';
 
-    document.getElementById('nodeColor').value = '#F3F3F4';
-    document.getElementById('nodeColorHex').value = '#F3F3F4';
-
-    document.getElementById('bgColor').value = '#010204';
-    document.getElementById('bgColorHex').value = '#010204';
+    getControl('lineColorValue').textContent = 'F3F3F4';
+    getControl('nodeColorValue').textContent = 'F3F3F4';
+    getControl('bgColorValue').textContent = '050607';
 
     // Update all slider progress bars
-    document.querySelectorAll('.slider').forEach(updateSliderProgress);
+    generatorRoot.querySelectorAll('.slider').forEach(updateSliderProgress);
 
     // Set first preset as active
     applyPreset(0);
@@ -498,72 +561,58 @@ function downloadSvg() {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-}
 
-/**
- * Toggle section expansion
- */
-function toggleSection(header) {
-    const section = header.closest('.panel-section');
-    const content = section.querySelector('.section-content');
-    const isExpanded = header.dataset.expanded === 'true';
-
-    header.dataset.expanded = !isExpanded;
-    content.classList.toggle('collapsed', isExpanded);
+    const label = generatorRoot.querySelector('[data-download-label]');
+    if (label) {
+        label.textContent = 'SVG saved';
+        window.setTimeout(() => { label.textContent = 'Export SVG'; }, 1400);
+    }
+    showToast('Transparent SVG exported');
 }
 
 // ============================================================================
 // Initialize on Page Load
 // ============================================================================
 
-document.addEventListener('DOMContentLoaded', () => {
+function initializeGenerator() {
+    generatorRoot = document.querySelector('[data-tilde-generator]');
+    if (!generatorRoot) return;
+    if (generatorRoot.dataset.initialized === 'true') return;
+    generatorRoot.dataset.initialized = 'true';
+
     // Generate preset buttons
-    const presetsGrid = document.getElementById('presetsGrid');
+    const presetsGrid = generatorRoot.querySelector('[data-presets]');
     presets.forEach((preset, index) => {
         const btn = document.createElement('button');
-        btn.className = 'preset-btn' + (index === 0 ? ' active' : '');
+        btn.type = 'button';
+        btn.className = 'preset-button' + (index === 0 ? ' is-active' : '');
         btn.innerHTML = generatePresetPreview(preset.nodes);
         btn.title = preset.name;
+        btn.setAttribute('aria-label', `${preset.name} structure`);
+        btn.setAttribute('aria-pressed', String(index === 0));
         btn.addEventListener('click', () => applyPreset(index));
         presetsGrid.appendChild(btn);
     });
 
-    // Set up section headers
-    document.querySelectorAll('.section-header').forEach(header => {
-        header.addEventListener('click', () => toggleSection(header));
-    });
-
-    // Set up color picker and HEX input synchronization
+    // Keep compact color labels synchronized with native color inputs.
     const colorPairs = [
-        { picker: 'lineColor', hex: 'lineColorHex' },
-        { picker: 'nodeColor', hex: 'nodeColorHex' },
-        { picker: 'bgColor', hex: 'bgColorHex' }
+        { picker: 'lineColor', value: 'lineColorValue' },
+        { picker: 'nodeColor', value: 'nodeColorValue' },
+        { picker: 'bgColor', value: 'bgColorValue' }
     ];
 
-    colorPairs.forEach(({ picker, hex }) => {
-        const pickerElem = document.getElementById(picker);
-        const hexElem = document.getElementById(hex);
+    colorPairs.forEach(({ picker, value }) => {
+        const pickerElem = getControl(picker);
+        const valueElem = getControl(value);
 
         pickerElem.addEventListener('input', (e) => {
-            hexElem.value = e.target.value.toUpperCase();
-            render();
-        });
-
-        hexElem.addEventListener('input', (e) => {
-            let value = e.target.value.trim();
-            if (value && !value.startsWith('#')) {
-                value = '#' + value;
-            }
-            if (/^#[0-9A-F]{6}$/i.test(value)) {
-                pickerElem.value = value;
-                hexElem.value = value.toUpperCase();
-                render();
-            }
+            valueElem.textContent = e.target.value.slice(1).toUpperCase();
+            scheduleRender();
         });
     });
 
     // Set up nodes input with auto-comma formatting
-    const nodesInput = document.getElementById('nodesInput');
+    const nodesInput = getControl('nodesInput');
     nodesInput.addEventListener('input', (e) => {
         // Get cursor position before formatting
         const cursorPos = e.target.selectionStart;
@@ -583,16 +632,17 @@ document.addEventListener('DOMContentLoaded', () => {
         e.target.setSelectionRange(Math.min(newCursorPos + 1, formatted.length), Math.min(newCursorPos + 1, formatted.length));
 
         // Clear active preset when manually editing
-        document.querySelectorAll('.preset-btn').forEach(btn => btn.classList.remove('active'));
-        render();
+        generatorRoot.querySelectorAll('.preset-button').forEach(btn => {
+            btn.classList.remove('is-active');
+            btn.setAttribute('aria-pressed', 'false');
+        });
+        scheduleRender();
     });
 
-    // Set up randomize button
-    document.getElementById('randomizeBtn').addEventListener('click', randomizeNodes);
-
-    // Button event listeners
-    document.getElementById('resetBtn').addEventListener('click', resetToDefaults);
-    document.getElementById('downloadBtn').addEventListener('click', downloadSvg);
+    generatorRoot.querySelector('[data-action="randomize"]').addEventListener('click', randomizeNodes);
+    generatorRoot.querySelector('[data-action="reset"]').addEventListener('click', resetToDefaults);
+    generatorRoot.querySelector('[data-action="regenerate"]').addEventListener('click', regenerate);
+    generatorRoot.querySelector('[data-action="download"]').addEventListener('click', downloadSvg);
 
     // Map of slider IDs to their value display IDs
     const sliderValueMap = {
@@ -606,8 +656,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Set up sliders
     Object.entries(sliderValueMap).forEach(([sliderId, valueId]) => {
-        const slider = document.getElementById(sliderId);
-        const valueDisplay = document.getElementById(valueId);
+        const slider = getControl(sliderId);
+        const valueDisplay = getControl(valueId);
 
         if (slider && valueDisplay) {
             // Initial progress
@@ -617,7 +667,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const value = parseFloat(e.target.value);
                 valueDisplay.textContent = value.toFixed(2);
                 updateSliderProgress(slider);
-                render();
+                scheduleRender();
             });
         }
     });
@@ -626,16 +676,47 @@ document.addEventListener('DOMContentLoaded', () => {
     const controls = ['showEdgeNodes', 'lineColor', 'nodeColor', 'bgColor'];
 
     controls.forEach(id => {
-        const elem = document.getElementById(id);
+        const elem = getControl(id);
         if (elem) {
             if (elem.type === 'checkbox') {
-                elem.addEventListener('change', render);
+                elem.addEventListener('change', scheduleRender);
             } else {
-                elem.addEventListener('input', render);
+                elem.addEventListener('input', scheduleRender);
             }
         }
     });
 
+    const fullscreenButton = generatorRoot.querySelector('[data-action="fullscreen"]');
+    if (!generatorRoot.requestFullscreen) {
+        fullscreenButton.hidden = true;
+    } else {
+        fullscreenButton.addEventListener('click', async () => {
+            try {
+                if (document.fullscreenElement === generatorRoot) {
+                    await document.exitFullscreen();
+                } else {
+                    await generatorRoot.requestFullscreen();
+                }
+            } catch (error) {
+                showToast('Full screen is unavailable in this browser');
+            }
+        });
+
+        document.addEventListener('fullscreenchange', () => {
+            const isFullscreen = document.fullscreenElement === generatorRoot;
+            fullscreenButton.setAttribute('aria-label', isFullscreen ? 'Exit full screen' : 'Enter full screen');
+            fullscreenButton.title = isFullscreen ? 'Exit full screen' : 'Full screen';
+        });
+    }
+
     // Initialize with defaults
     resetToDefaults();
-});
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeGenerator, { once: true });
+} else {
+    initializeGenerator();
+}
+
+})();
