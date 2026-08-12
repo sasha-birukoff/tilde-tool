@@ -150,7 +150,7 @@ body.generator-page {
     top: 18px;
     left: 18px;
     display: flex;
-    width: clamp(294px, 20vw, 340px);
+    width: clamp(278px, 19vw, 304px);
     flex-direction: column;
     gap: 30px;
     padding: 26px;
@@ -237,7 +237,7 @@ body.generator-page {
     min-width: 0;
     padding: 0 14px;
     color: var(--ink);
-    background: var(--panel-raised);
+    background: transparent;
     border: 1px solid var(--line);
     border-radius: 8px;
     outline: none;
@@ -259,6 +259,11 @@ body.generator-page {
 .nodes-input-row .icon-button {
     width: 46px;
     height: 46px;
+}
+
+.nodes-input-row .randomize-button,
+.nodes-input-row .randomize-button:hover {
+    background: transparent;
 }
 
 .preset-drawer-header h2 {

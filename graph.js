@@ -475,7 +475,7 @@ function applyPreset(index) {
     activePresetIndex = index;
 
     baseNodesPattern = preset.nodes;
-    getControl('nodesInput').value = preset.nodes;
+    getControl('nodesInput').value = preset.nodes.split(',').join(', ');
     syncPresetButtons();
 
     scheduleRender();
@@ -496,10 +496,10 @@ function randomizeNodes() {
     const numColumns = Math.floor(Math.random() * 7) + 3;
     const nodes = [];
     for (let i = 0; i < numColumns; i++) {
-        nodes.push(Math.floor(Math.random() * 9) + 1);
+        nodes.push(Math.floor(Math.random() * 5) + 1);
     }
     baseNodesPattern = nodes.join(',');
-    getControl('nodesInput').value = baseNodesPattern;
+    getControl('nodesInput').value = nodes.join(', ');
 
     activePresetIndex = -1;
     syncPresetButtons();
@@ -592,7 +592,7 @@ function startShowcase() {
  */
 function resetToDefaults() {
     baseNodesPattern = '1,5,3,5,1';
-    getControl('nodesInput').value = baseNodesPattern;
+    getControl('nodesInput').value = baseNodesPattern.split(',').join(', ');
 
     getControl('columnSpacing').value = 1.0;
     getControl('columnSpacingValue').textContent = '1.00';
@@ -642,45 +642,14 @@ async function copyGraphic() {
     const label = generatorRoot.querySelector('[data-copy-label]');
 
     try {
-        const svgBlob = new Blob([lastSvg], { type: 'image/svg+xml' });
-        const svgUrl = URL.createObjectURL(svgBlob);
-        const image = new Image();
-
-        await new Promise((resolve, reject) => {
-            image.onload = resolve;
-            image.onerror = reject;
-            image.src = svgUrl;
-        });
-
-        const canvas = document.createElement('canvas');
-        const scale = Math.min(4, 1440 / Math.max(image.width, image.height));
-        canvas.width = Math.max(1, Math.round(image.width * scale));
-        canvas.height = Math.max(1, Math.round(image.height * scale));
-        const context = canvas.getContext('2d');
-        context.drawImage(image, 0, 0, canvas.width, canvas.height);
-        URL.revokeObjectURL(svgUrl);
-
-        const pngBlob = await new Promise((resolve, reject) => {
-            canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error('PNG conversion failed')), 'image/png');
-        });
-
-        await navigator.clipboard.write([new ClipboardItem({ 'image/png': pngBlob })]);
+        await navigator.clipboard.writeText(lastSvg);
         if (label) {
             label.textContent = 'Copied';
             window.setTimeout(() => { label.textContent = 'Copy'; }, 1400);
         }
-        showToast('Transparent PNG copied');
+        showToast('SVG copied');
     } catch (error) {
-        try {
-            await navigator.clipboard.writeText(lastSvg);
-            if (label) {
-                label.textContent = 'Copied';
-                window.setTimeout(() => { label.textContent = 'Copy'; }, 1400);
-            }
-            showToast('SVG copied');
-        } catch (clipboardError) {
-            showToast('Copy is unavailable in this browser');
-        }
+        showToast('Copy is unavailable in this browser');
     }
 }
 
@@ -733,8 +702,8 @@ function initializeGenerator() {
     const nodesInput = getControl('nodesInput');
     nodesInput.addEventListener('input', (event) => {
         const digits = event.target.value.replace(/[^1-9]/g, '').slice(0, 9).split('');
-        event.target.value = digits.join(',');
-        baseNodesPattern = event.target.value;
+        event.target.value = digits.join(', ');
+        baseNodesPattern = digits.join(',');
         activePresetIndex = -1;
         syncPresetButtons();
         scheduleRender();
