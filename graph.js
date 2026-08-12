@@ -1,6 +1,3 @@
-(function () {
-'use strict';
-
 // ============================================================================
 // Tilde Graph Architect - Pure JavaScript Graph Visualization
 // ============================================================================
@@ -22,21 +19,12 @@ const config = {
     nodeColor: '#F3F3F4',
     mergeTolerance: 1,
     showEdgeNodes: true,
-    bgColor: '#0B0B0C',
+    bgColor: '#010204',
 };
 
 let lastSvg = '';
 let lastStats = { nodes: 0, edges: 0, intersections: 0 };
 let activePresetIndex = 0;
-let generatorRoot = null;
-let scheduledRender = null;
-let renderAnimationTimer = null;
-let toastTimer = null;
-let baseNodesPattern = '1,5,3,5,1';
-
-function getControl(id) {
-    return generatorRoot.querySelector(`[id="${id}"]`);
-}
 
 // Preset configurations
 const presets = [
@@ -46,11 +34,9 @@ const presets = [
     { name: 'Pulse', nodes: '1,3,1,7,1,3,1', columnSpacing: 1.0, rowSpacing: 1.0 },
     { name: 'Bow', nodes: '8,3,8', columnSpacing: 1.0, rowSpacing: 1.0 },
     { name: 'Grid', nodes: '4,4,4,4', columnSpacing: 1.0, rowSpacing: 1.0 },
-    { name: 'Horizon', nodes: '1,2,3,5,3,2,1,2,1', columnSpacing: 1.0, rowSpacing: 1.0 },
-    { name: 'Burst', nodes: '1,7,1', columnSpacing: 1.0, rowSpacing: 1.0 },
+    { name: 'Pinch', nodes: '3,1,3', columnSpacing: 1.0, rowSpacing: 1.0 },
+    { name: 'Burst', nodes: '1,8,1', columnSpacing: 1.0, rowSpacing: 1.0 },
 ];
-
-const primaryPresetIndexes = [0, 1, 4, 7];
 
 // ============================================================================
 // Core Functions
@@ -67,14 +53,14 @@ function parseNodesPerColumn(inputStr) {
     const parts = inputStr.split(',').map(s => s.trim()).filter(s => s !== '');
     const nums = parts.map(s => {
         const n = parseInt(s, 10);
-        return isNaN(n) ? 0 : Math.max(1, Math.min(9, n));
+        return isNaN(n) ? 0 : Math.max(1, Math.min(8, n));
     }).filter(n => n > 0);
 
     if (nums.length === 0) {
         return [1, 5, 3, 5, 1];
     }
 
-    const clamped = nums.slice(0, 9);
+    const clamped = nums.slice(0, 7);
     if (clamped.length < 2) {
         while (clamped.length < 2) {
             clamped.push(1);
@@ -88,23 +74,18 @@ function parseNodesPerColumn(inputStr) {
  * Read all control inputs and update config object
  */
 function readControlsToConfig() {
-    const nodesInput = getControl('nodesInput').value;
+    const nodesInput = document.getElementById('nodesInput').value;
 
-    const readNumber = (id, fallback) => {
-        const value = parseFloat(getControl(id).value);
-        return Number.isFinite(value) ? value : fallback;
-    };
-
-    config.columnSpacing = readNumber('columnSpacing', 1.0);
-    config.rowSpacing = readNumber('rowSpacing', 1.0);
-    config.nodeBaseSize = readNumber('nodeBaseSize', 8);
-    config.lineThickness = 0.5;
-    config.nodeScaleK = 1;
-    config.mergeTolerance = 1;
-    config.showEdgeNodes = true;
-    config.lineColor = '#F3F3F4';
-    config.nodeColor = '#F3F3F4';
-    config.bgColor = '#0B0B0C';
+    config.columnSpacing = parseFloat(document.getElementById('columnSpacing').value) || 1.0;
+    config.rowSpacing = parseFloat(document.getElementById('rowSpacing').value) || 1.0;
+    config.lineThickness = parseFloat(document.getElementById('lineThickness').value) || 0.5;
+    config.nodeBaseSize = parseFloat(document.getElementById('nodeBaseSize').value) || 2;
+    config.nodeScaleK = parseFloat(document.getElementById('nodeScaleK').value) || 0.4;
+    config.mergeTolerance = parseFloat(document.getElementById('mergeTolerance').value) || 1;
+    config.showEdgeNodes = document.getElementById('showEdgeNodes').checked;
+    config.lineColor = document.getElementById('lineColor').value;
+    config.nodeColor = document.getElementById('nodeColor').value;
+    config.bgColor = document.getElementById('bgColor').value;
 
     config.nodesPerColumn = parseNodesPerColumn(nodesInput);
 }
@@ -308,7 +289,8 @@ function buildSvg(nodes, edges, intersections, cfg) {
     }
 
     for (const inter of intersections) {
-        const size = cfg.nodeBaseSize + cfg.nodeScaleK * inter.count;
+        const interBaseSize = cfg.nodeBaseSize + cfg.nodeScaleK;
+        const size = interBaseSize + cfg.nodeScaleK * inter.count;
         const half = size / 2;
         minX = Math.min(minX, inter.x - half);
         maxX = Math.max(maxX, inter.x + half);
@@ -325,7 +307,7 @@ function buildSvg(nodes, edges, intersections, cfg) {
     const width = maxX - minX;
     const height = maxY - minY;
 
-    const svg = `<svg width="${width}" height="${height}" viewBox="${minX} ${minY} ${width} ${height}" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false" shape-rendering="geometricPrecision">
+    const svg = `<svg width="${width}" height="${height}" viewBox="${minX} ${minY} ${width} ${height}" xmlns="http://www.w3.org/2000/svg">
 ${svgContent}
 </svg>`;
 
@@ -362,7 +344,7 @@ function generatePresetPreview(nodesStr) {
     for (let i = 0; i < columns.length - 1; i++) {
         for (const n1 of columns[i]) {
             for (const n2 of columns[i + 1]) {
-                svgContent += `<line x1="${n1.x}" y1="${n1.y}" x2="${n2.x}" y2="${n2.y}" stroke="currentColor" stroke-opacity="0.42" stroke-width="0.65"/>`;
+                svgContent += `<line x1="${n1.x}" y1="${n1.y}" x2="${n2.x}" y2="${n2.y}" stroke="rgba(69, 116, 140, 0.6)" stroke-width="0.75"/>`;
             }
         }
     }
@@ -370,7 +352,7 @@ function generatePresetPreview(nodesStr) {
     // Draw nodes with light gradient color
     for (const col of columns) {
         for (const n of col) {
-            svgContent += `<rect x="${n.x - 1.5}" y="${n.y - 1.5}" width="3" height="3" fill="currentColor"/>`;
+            svgContent += `<circle cx="${n.x}" cy="${n.y}" r="2" fill="#BFE8FE"/>`;
         }
     }
 
@@ -381,18 +363,13 @@ function generatePresetPreview(nodesStr) {
  * Update stats display
  */
 function updateStats(nodeCount, edgeCount, intersectionCount) {
-    const formatter = new Intl.NumberFormat('en-US');
-    const values = {
-        nodes: nodeCount,
-        edges: edgeCount,
-        intersections: intersectionCount,
-    };
+    const statNodes = document.getElementById('statNodes');
+    const statEdges = document.getElementById('statEdges');
+    const statIntersections = document.getElementById('statIntersections');
 
-    Object.entries(values).forEach(([key, value]) => {
-        const output = generatorRoot.querySelector(`[data-stat="${key}"]`);
-        if (output) output.textContent = formatter.format(value);
-    });
-
+    if (statNodes) statNodes.textContent = nodeCount;
+    if (statEdges) statEdges.textContent = edgeCount;
+    if (statIntersections) statIntersections.textContent = intersectionCount;
     lastStats = { nodes: nodeCount, edges: edgeCount, intersections: intersectionCount };
 }
 
@@ -419,50 +396,14 @@ function render() {
 
     lastSvg = buildSvg(nodes, edges, intersections, config);
 
-    const preview = generatorRoot.querySelector('[data-preview]');
+    const preview = document.getElementById('preview');
     preview.innerHTML = lastSvg;
 
     // Apply background to the entire canvas area (not included in SVG export)
-    generatorRoot.querySelector('.canvas-area').style.backgroundColor = config.bgColor;
+    document.querySelector('.canvas-area').style.backgroundColor = config.bgColor;
 
     // Update stats
     updateStats(nodes.length, edges.length, intersections.length);
-}
-
-function scheduleRender() {
-    if (scheduledRender) return;
-
-    scheduledRender = requestAnimationFrame(() => {
-        scheduledRender = null;
-        render();
-    });
-}
-
-function regenerate() {
-    const preview = generatorRoot.querySelector('[data-preview]');
-    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-    window.clearTimeout(renderAnimationTimer);
-    if (reduceMotion) {
-        render();
-        return;
-    }
-
-    preview.classList.add('is-rendering');
-    renderAnimationTimer = window.setTimeout(() => {
-        render();
-        requestAnimationFrame(() => preview.classList.remove('is-rendering'));
-    }, 110);
-}
-
-function showToast(message) {
-    const toast = generatorRoot.querySelector('[data-toast]');
-    if (!toast) return;
-
-    window.clearTimeout(toastTimer);
-    toast.textContent = message;
-    toast.classList.add('is-visible');
-    toastTimer = window.setTimeout(() => toast.classList.remove('is-visible'), 1800);
 }
 
 /**
@@ -474,137 +415,71 @@ function applyPreset(index) {
 
     activePresetIndex = index;
 
-    baseNodesPattern = preset.nodes;
-    getControl('nodesInput').value = preset.nodes.split(',').join(', ');
-    syncPresetButtons();
+    // Update nodes input only - keep other settings as-is
+    document.getElementById('nodesInput').value = preset.nodes;
 
-    scheduleRender();
-}
-
-function syncPresetButtons() {
-    generatorRoot.querySelectorAll('[data-preset-index]').forEach((button) => {
-        const isActive = Number(button.dataset.presetIndex) === activePresetIndex;
-        button.classList.toggle('is-active', isActive);
-        button.setAttribute('aria-pressed', String(isActive));
+    // Update preset buttons
+    document.querySelectorAll('.preset-btn').forEach((btn, i) => {
+        btn.classList.toggle('active', i === index);
     });
+
+    render();
 }
 
 /**
  * Generate random nodes configuration
  */
 function randomizeNodes() {
-    const numColumns = Math.floor(Math.random() * 7) + 3;
+    const numColumns = Math.floor(Math.random() * 4) + 3; // 3-6 columns
     const nodes = [];
     for (let i = 0; i < numColumns; i++) {
-        nodes.push(Math.floor(Math.random() * 5) + 1);
+        nodes.push(Math.floor(Math.random() * 7) + 1); // 1-7 nodes
     }
-    baseNodesPattern = nodes.join(',');
-    getControl('nodesInput').value = nodes.join(', ');
+    document.getElementById('nodesInput').value = nodes.join(',');
 
-    activePresetIndex = -1;
-    syncPresetButtons();
+    // Clear active preset
+    document.querySelectorAll('.preset-btn').forEach(btn => btn.classList.remove('active'));
 
-    scheduleRender();
-}
-
-// ============================================================================
-// Showcase Mode - Hidden feature for recording demos (press 'D' to trigger)
-// ============================================================================
-
-let showcaseRunning = false;
-
-// Curated sequence - all shapes share a center point for smooth morphing
-const showcaseSequence = [
-    '1,3,5,3,1',          // Small diamond
-    '1,5,9,5,1',          // Big diamond
-    '1,3,5,7,5,3,1',      // Tall diamond
-    '1,7,1,7,1',          // Bow tie
-    '1,5,1,5,1',          // Small bow
-    '1,9,1',              // Burst
-    '1,3,5,3,1',          // Back to small diamond
-];
-
-/**
- * Compute node positions for morphing
- */
-function getNodePositions(nodesPerColumnStr) {
-    const nodesPerColumn = parseNodesPerColumn(nodesPerColumnStr);
-    const positions = [];
-    const innerWidth = config.svgWidth - config.marginLeft - config.marginRight;
-    const innerHeight = config.svgHeight - config.marginTop - config.marginBottom;
-
-    nodesPerColumn.forEach((nodeCount, colIndex) => {
-        const spacingFraction = nodesPerColumn.length > 1
-            ? (colIndex / (nodesPerColumn.length - 1)) * config.columnSpacing
-            : 0;
-        const colX = config.marginLeft + spacingFraction * innerWidth;
-
-        for (let rowIndex = 0; rowIndex < nodeCount; rowIndex++) {
-            let nodeY;
-            if (nodeCount === 1) {
-                nodeY = config.svgHeight / 2;
-            } else {
-                const fraction = rowIndex / (nodeCount - 1);
-                nodeY = config.marginTop + fraction * config.rowSpacing * innerHeight;
-            }
-            // Store normalized position for matching
-            const colFrac = nodesPerColumn.length > 1 ? colIndex / (nodesPerColumn.length - 1) : 0.5;
-            const rowFrac = nodeCount > 1 ? rowIndex / (nodeCount - 1) : 0.5;
-            positions.push({ x: colX, y: nodeY, colFrac, rowFrac });
-        }
-    });
-    return positions;
-}
-
-/**
- * Start showcase mode - instant cuts through all 8 presets
- */
-function startShowcase() {
-    if (showcaseRunning) return;
-    showcaseRunning = true;
-
-    // Use default settings
-    resetToDefaults();
-    readControlsToConfig();
-
-    const holdDuration = 225;      // ms to hold each state
-    let currentStep = 0;
-
-    function showStep() {
-        // Loop back to first preset after going through all
-        if (currentStep > presets.length) {
-            showcaseRunning = false;
-            return;
-        }
-
-        // Instant switch - apply preset (handles button state + glow)
-        applyPreset(currentStep % presets.length);
-
-        currentStep++;
-        setTimeout(showStep, holdDuration);
-    }
-
-    showStep();
+    render();
 }
 
 /**
  * Reset all controls to default values
  */
 function resetToDefaults() {
-    baseNodesPattern = '1,5,3,5,1';
-    getControl('nodesInput').value = baseNodesPattern.split(',').join(', ');
+    document.getElementById('nodesInput').value = '1,5,3,5,1';
 
-    getControl('columnSpacing').value = 1.0;
-    getControl('columnSpacingValue').textContent = '1.00';
+    document.getElementById('columnSpacing').value = 1.0;
+    document.getElementById('columnSpacingValue').textContent = '1.00';
 
-    getControl('rowSpacing').value = 1.0;
-    getControl('rowSpacingValue').textContent = '1.00';
+    document.getElementById('rowSpacing').value = 1.0;
+    document.getElementById('rowSpacingValue').textContent = '1.00';
 
-    getControl('nodeBaseSize').value = 8.0;
-    getControl('nodeBaseSizeValue').textContent = '8';
+    document.getElementById('lineThickness').value = 0.5;
+    document.getElementById('lineThicknessValue').textContent = '0.50';
+
+    document.getElementById('nodeBaseSize').value = 8.0;
+    document.getElementById('nodeBaseSizeValue').textContent = '8.00';
+
+    document.getElementById('nodeScaleK').value = 1.0;
+    document.getElementById('nodeScaleKValue').textContent = '1.00';
+
+    document.getElementById('mergeTolerance').value = 1;
+    document.getElementById('mergeToleranceValue').textContent = '1.00';
+
+    document.getElementById('showEdgeNodes').checked = true;
+
+    document.getElementById('lineColor').value = '#F3F3F4';
+    document.getElementById('lineColorHex').value = '#F3F3F4';
+
+    document.getElementById('nodeColor').value = '#F3F3F4';
+    document.getElementById('nodeColorHex').value = '#F3F3F4';
+
+    document.getElementById('bgColor').value = '#010204';
+    document.getElementById('bgColorHex').value = '#010204';
 
     // Update all slider progress bars
-    generatorRoot.querySelectorAll('.slider').forEach(updateSliderProgress);
+    document.querySelectorAll('.slider').forEach(updateSliderProgress);
 
     // Set first preset as active
     applyPreset(0);
@@ -627,105 +502,116 @@ function downloadSvg() {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-
-    const label = generatorRoot.querySelector('[data-download-label]');
-    if (label) {
-        label.textContent = 'SVG saved';
-        window.setTimeout(() => { label.textContent = 'Export'; }, 1400);
-    }
-    showToast('Transparent SVG exported');
 }
 
-async function copyGraphic() {
-    if (!lastSvg) return;
+/**
+ * Toggle section expansion
+ */
+function toggleSection(header) {
+    const section = header.closest('.panel-section');
+    const content = section.querySelector('.section-content');
+    const isExpanded = header.dataset.expanded === 'true';
 
-    const label = generatorRoot.querySelector('[data-copy-label]');
-
-    try {
-        await navigator.clipboard.writeText(lastSvg);
-        if (label) {
-            label.textContent = 'Copied';
-            window.setTimeout(() => { label.textContent = 'Copy'; }, 1400);
-        }
-        showToast('SVG copied');
-    } catch (error) {
-        showToast('Copy is unavailable in this browser');
-    }
+    header.dataset.expanded = !isExpanded;
+    content.classList.toggle('collapsed', isExpanded);
 }
 
 // ============================================================================
 // Initialize on Page Load
 // ============================================================================
 
-function initializeGenerator() {
-    generatorRoot = document.querySelector('[data-tilde-generator]');
-    if (!generatorRoot) return;
-    if (generatorRoot.dataset.initialized === 'true') return;
-    generatorRoot.dataset.initialized = 'true';
-
-    // Generate the complete preset shelf.
-    const presetsGrid = generatorRoot.querySelector('[data-presets]');
+document.addEventListener('DOMContentLoaded', () => {
+    // Generate preset buttons
+    const presetsGrid = document.getElementById('presetsGrid');
     presets.forEach((preset, index) => {
         const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'preset-button' + (index === 0 ? ' is-active' : '');
-        btn.innerHTML = `${generatePresetPreview(preset.nodes)}<span class="preset-name">${preset.name}</span>`;
-        btn.dataset.presetIndex = String(index);
+        btn.className = 'preset-btn' + (index === 0 ? ' active' : '');
+        btn.innerHTML = generatePresetPreview(preset.nodes);
         btn.title = preset.name;
-        btn.setAttribute('aria-label', `${preset.name} structure`);
-        btn.setAttribute('aria-pressed', String(index === 0));
-        btn.addEventListener('click', () => {
-            applyPreset(index);
-            setPresetDrawerOpen(false);
-        });
+        btn.addEventListener('click', () => applyPreset(index));
         presetsGrid.appendChild(btn);
     });
 
-    // Keep the four strongest structures immediately available on the canvas.
-    const primaryPresets = generatorRoot.querySelector('[data-primary-presets]');
-    primaryPresetIndexes.forEach((presetIndex) => {
-        const preset = presets[presetIndex];
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'mode-button' + (presetIndex === 0 ? ' is-active' : '');
-        btn.textContent = preset.name;
-        btn.dataset.presetIndex = String(presetIndex);
-        btn.setAttribute('aria-pressed', String(presetIndex === 0));
-        btn.addEventListener('click', () => applyPreset(presetIndex));
-        primaryPresets.appendChild(btn);
+    // Set up section headers
+    document.querySelectorAll('.section-header').forEach(header => {
+        header.addEventListener('click', () => toggleSection(header));
     });
 
-    generatorRoot.querySelector('[data-action="randomize"]').addEventListener('click', randomizeNodes);
-    generatorRoot.querySelector('[data-action="download"]').addEventListener('click', downloadSvg);
-    generatorRoot.querySelector('[data-action="copy"]').addEventListener('click', copyGraphic);
+    // Set up color picker and HEX input synchronization
+    const colorPairs = [
+        { picker: 'lineColor', hex: 'lineColorHex' },
+        { picker: 'nodeColor', hex: 'nodeColorHex' },
+        { picker: 'bgColor', hex: 'bgColorHex' }
+    ];
 
-    const nodesInput = getControl('nodesInput');
-    nodesInput.addEventListener('input', (event) => {
-        const digits = event.target.value.replace(/[^1-9]/g, '').slice(0, 9).split('');
-        event.target.value = digits.join(', ');
-        baseNodesPattern = digits.join(',');
-        activePresetIndex = -1;
-        syncPresetButtons();
-        scheduleRender();
+    colorPairs.forEach(({ picker, hex }) => {
+        const pickerElem = document.getElementById(picker);
+        const hexElem = document.getElementById(hex);
+
+        pickerElem.addEventListener('input', (e) => {
+            hexElem.value = e.target.value.toUpperCase();
+            render();
+        });
+
+        hexElem.addEventListener('input', (e) => {
+            let value = e.target.value.trim();
+            if (value && !value.startsWith('#')) {
+                value = '#' + value;
+            }
+            if (/^#[0-9A-F]{6}$/i.test(value)) {
+                pickerElem.value = value;
+                hexElem.value = value.toUpperCase();
+                render();
+            }
+        });
     });
 
-    generatorRoot.querySelector('[data-action="toggle-presets"]').addEventListener('click', () => {
-        const drawer = generatorRoot.querySelector('[data-preset-drawer]');
-        setPresetDrawerOpen(drawer.hidden);
+    // Set up nodes input with auto-comma formatting
+    const nodesInput = document.getElementById('nodesInput');
+    nodesInput.addEventListener('input', (e) => {
+        // Get cursor position before formatting
+        const cursorPos = e.target.selectionStart;
+        const oldValue = e.target.value;
+
+        // Remove all non-digits, then join with commas
+        const digits = oldValue.replace(/[^0-9]/g, '').split('');
+        const formatted = digits.join(',');
+
+        // Update value
+        e.target.value = formatted;
+
+        // Adjust cursor position (account for added commas)
+        const oldCommasBefore = (oldValue.slice(0, cursorPos).match(/,/g) || []).length;
+        const digitsTyped = cursorPos - oldCommasBefore;
+        const newCursorPos = digitsTyped > 0 ? digitsTyped * 2 - 1 : 0;
+        e.target.setSelectionRange(Math.min(newCursorPos + 1, formatted.length), Math.min(newCursorPos + 1, formatted.length));
+
+        // Clear active preset when manually editing
+        document.querySelectorAll('.preset-btn').forEach(btn => btn.classList.remove('active'));
+        render();
     });
-    generatorRoot.querySelector('[data-action="close-presets"]').addEventListener('click', () => setPresetDrawerOpen(false));
+
+    // Set up randomize button
+    document.getElementById('randomizeBtn').addEventListener('click', randomizeNodes);
+
+    // Button event listeners
+    document.getElementById('resetBtn').addEventListener('click', resetToDefaults);
+    document.getElementById('downloadBtn').addEventListener('click', downloadSvg);
 
     // Map of slider IDs to their value display IDs
     const sliderValueMap = {
         'columnSpacing': 'columnSpacingValue',
         'rowSpacing': 'rowSpacingValue',
-        'nodeBaseSize': 'nodeBaseSizeValue'
+        'lineThickness': 'lineThicknessValue',
+        'nodeBaseSize': 'nodeBaseSizeValue',
+        'nodeScaleK': 'nodeScaleKValue',
+        'mergeTolerance': 'mergeToleranceValue'
     };
 
     // Set up sliders
     Object.entries(sliderValueMap).forEach(([sliderId, valueId]) => {
-        const slider = getControl(sliderId);
-        const valueDisplay = getControl(valueId);
+        const slider = document.getElementById(sliderId);
+        const valueDisplay = document.getElementById(valueId);
 
         if (slider && valueDisplay) {
             // Initial progress
@@ -733,40 +619,27 @@ function initializeGenerator() {
 
             slider.addEventListener('input', (e) => {
                 const value = parseFloat(e.target.value);
-                valueDisplay.textContent = sliderId === 'nodeBaseSize'
-                        ? value.toFixed(value % 1 === 0 ? 0 : 1)
-                        : value.toFixed(2);
+                valueDisplay.textContent = value.toFixed(2);
                 updateSliderProgress(slider);
-                scheduleRender();
+                render();
             });
         }
     });
 
-    // Showcase mode - press 'D' to trigger demo animation
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') setPresetDrawerOpen(false);
-        if ((e.key === 'd' || e.key === 'D') && !e.ctrlKey && !e.metaKey && !e.altKey) {
-            // Don't trigger if typing in an input
-            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-            startShowcase();
+    // Real-time preview update on control changes
+    const controls = ['showEdgeNodes', 'lineColor', 'nodeColor', 'bgColor'];
+
+    controls.forEach(id => {
+        const elem = document.getElementById(id);
+        if (elem) {
+            if (elem.type === 'checkbox') {
+                elem.addEventListener('change', render);
+            } else {
+                elem.addEventListener('input', render);
+            }
         }
     });
 
     // Initialize with defaults
     resetToDefaults();
-}
-
-function setPresetDrawerOpen(isOpen) {
-    const drawer = generatorRoot.querySelector('[data-preset-drawer]');
-    const toggle = generatorRoot.querySelector('[data-action="toggle-presets"]');
-    drawer.hidden = !isOpen;
-    toggle.setAttribute('aria-expanded', String(isOpen));
-}
-
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initializeGenerator, { once: true });
-} else {
-    initializeGenerator();
-}
-
-})();
+});
