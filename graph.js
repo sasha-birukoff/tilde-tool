@@ -475,8 +475,7 @@ function applyPreset(index) {
     activePresetIndex = index;
 
     baseNodesPattern = preset.nodes;
-    syncDimensionsToPattern();
-    updateNodesFromPattern();
+    getControl('nodesInput').value = preset.nodes;
     syncPresetButtons();
 
     scheduleRender();
@@ -490,60 +489,17 @@ function syncPresetButtons() {
     });
 }
 
-function syncDimensionsToPattern() {
-    const pattern = parseNodesPerColumn(baseNodesPattern);
-    const columnCount = getControl('columnCount');
-    const rowCount = getControl('rowCount');
-    const columns = pattern.length;
-    const rows = Math.max(...pattern);
-
-    columnCount.value = String(columns);
-    rowCount.value = String(rows);
-    getControl('columnCountValue').textContent = String(columns);
-    getControl('rowCountValue').textContent = String(rows);
-    updateSliderProgress(columnCount);
-    updateSliderProgress(rowCount);
-}
-
-function updateNodesFromPattern() {
-    const basePattern = parseNodesPerColumn(baseNodesPattern);
-    const targetColumns = parseInt(getControl('columnCount').value, 10) || basePattern.length;
-    const targetRows = parseInt(getControl('rowCount').value, 10) || Math.max(...basePattern);
-    const sampled = [];
-
-    for (let index = 0; index < targetColumns; index++) {
-        const position = targetColumns === 1
-            ? 0
-            : (index / (targetColumns - 1)) * (basePattern.length - 1);
-        const leftIndex = Math.floor(position);
-        const rightIndex = Math.min(basePattern.length - 1, Math.ceil(position));
-        const mix = position - leftIndex;
-        const count = basePattern[leftIndex] + ((basePattern[rightIndex] - basePattern[leftIndex]) * mix);
-        sampled.push(Math.max(1, Math.round(count)));
-    }
-
-    const sampledMax = Math.max(...sampled);
-    const scaled = sampled.map((count) => {
-        if (count <= 1 || sampledMax <= 1) return 1;
-        const normalized = (count - 1) / (sampledMax - 1);
-        return 1 + Math.round(normalized * (targetRows - 1));
-    });
-
-    getControl('nodesInput').value = scaled.join(',');
-}
-
 /**
  * Generate random nodes configuration
  */
 function randomizeNodes() {
-    const numColumns = parseInt(getControl('columnCount').value, 10) || 5;
-    const maxRows = parseInt(getControl('rowCount').value, 10) || 5;
+    const numColumns = Math.floor(Math.random() * 7) + 3;
     const nodes = [];
     for (let i = 0; i < numColumns; i++) {
-        nodes.push(Math.floor(Math.random() * maxRows) + 1);
+        nodes.push(Math.floor(Math.random() * 9) + 1);
     }
     baseNodesPattern = nodes.join(',');
-    updateNodesFromPattern();
+    getControl('nodesInput').value = baseNodesPattern;
 
     activePresetIndex = -1;
     syncPresetButtons();
@@ -636,12 +592,7 @@ function startShowcase() {
  */
 function resetToDefaults() {
     baseNodesPattern = '1,5,3,5,1';
-
-    getControl('columnCount').value = 5;
-    getControl('columnCountValue').textContent = '5';
-
-    getControl('rowCount').value = 5;
-    getControl('rowCountValue').textContent = '5';
+    getControl('nodesInput').value = baseNodesPattern;
 
     getControl('columnSpacing').value = 1.0;
     getControl('columnSpacingValue').textContent = '1.00';
@@ -680,9 +631,57 @@ function downloadSvg() {
     const label = generatorRoot.querySelector('[data-download-label]');
     if (label) {
         label.textContent = 'SVG saved';
-        window.setTimeout(() => { label.textContent = 'Export SVG'; }, 1400);
+        window.setTimeout(() => { label.textContent = 'Export'; }, 1400);
     }
     showToast('Transparent SVG exported');
+}
+
+async function copyGraphic() {
+    if (!lastSvg) return;
+
+    const label = generatorRoot.querySelector('[data-copy-label]');
+
+    try {
+        const svgBlob = new Blob([lastSvg], { type: 'image/svg+xml' });
+        const svgUrl = URL.createObjectURL(svgBlob);
+        const image = new Image();
+
+        await new Promise((resolve, reject) => {
+            image.onload = resolve;
+            image.onerror = reject;
+            image.src = svgUrl;
+        });
+
+        const canvas = document.createElement('canvas');
+        const scale = Math.min(4, 1440 / Math.max(image.width, image.height));
+        canvas.width = Math.max(1, Math.round(image.width * scale));
+        canvas.height = Math.max(1, Math.round(image.height * scale));
+        const context = canvas.getContext('2d');
+        context.drawImage(image, 0, 0, canvas.width, canvas.height);
+        URL.revokeObjectURL(svgUrl);
+
+        const pngBlob = await new Promise((resolve, reject) => {
+            canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error('PNG conversion failed')), 'image/png');
+        });
+
+        await navigator.clipboard.write([new ClipboardItem({ 'image/png': pngBlob })]);
+        if (label) {
+            label.textContent = 'Copied';
+            window.setTimeout(() => { label.textContent = 'Copy'; }, 1400);
+        }
+        showToast('Transparent PNG copied');
+    } catch (error) {
+        try {
+            await navigator.clipboard.writeText(lastSvg);
+            if (label) {
+                label.textContent = 'Copied';
+                window.setTimeout(() => { label.textContent = 'Copy'; }, 1400);
+            }
+            showToast('SVG copied');
+        } catch (clipboardError) {
+            showToast('Copy is unavailable in this browser');
+        }
+    }
 }
 
 // ============================================================================
@@ -728,8 +727,18 @@ function initializeGenerator() {
     });
 
     generatorRoot.querySelector('[data-action="randomize"]').addEventListener('click', randomizeNodes);
-    generatorRoot.querySelector('[data-action="reset"]').addEventListener('click', resetToDefaults);
     generatorRoot.querySelector('[data-action="download"]').addEventListener('click', downloadSvg);
+    generatorRoot.querySelector('[data-action="copy"]').addEventListener('click', copyGraphic);
+
+    const nodesInput = getControl('nodesInput');
+    nodesInput.addEventListener('input', (event) => {
+        const digits = event.target.value.replace(/[^1-9]/g, '').slice(0, 9).split('');
+        event.target.value = digits.join(',');
+        baseNodesPattern = event.target.value;
+        activePresetIndex = -1;
+        syncPresetButtons();
+        scheduleRender();
+    });
 
     generatorRoot.querySelector('[data-action="toggle-presets"]').addEventListener('click', () => {
         const drawer = generatorRoot.querySelector('[data-preset-drawer]');
@@ -739,8 +748,6 @@ function initializeGenerator() {
 
     // Map of slider IDs to their value display IDs
     const sliderValueMap = {
-        'columnCount': 'columnCountValue',
-        'rowCount': 'rowCountValue',
         'columnSpacing': 'columnSpacingValue',
         'rowSpacing': 'rowSpacingValue',
         'nodeBaseSize': 'nodeBaseSizeValue'
@@ -757,13 +764,10 @@ function initializeGenerator() {
 
             slider.addEventListener('input', (e) => {
                 const value = parseFloat(e.target.value);
-                valueDisplay.textContent = sliderId === 'columnCount' || sliderId === 'rowCount'
-                    ? String(Math.round(value))
-                    : sliderId === 'nodeBaseSize'
+                valueDisplay.textContent = sliderId === 'nodeBaseSize'
                         ? value.toFixed(value % 1 === 0 ? 0 : 1)
                         : value.toFixed(2);
                 updateSliderProgress(slider);
-                if (sliderId === 'columnCount' || sliderId === 'rowCount') updateNodesFromPattern();
                 scheduleRender();
             });
         }
