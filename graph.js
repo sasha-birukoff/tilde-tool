@@ -505,6 +505,42 @@ function downloadSvg() {
 }
 
 /**
+ * Copy SVG markup to the clipboard
+ */
+async function copySvg() {
+    if (!lastSvg) {
+        return;
+    }
+
+    const button = document.getElementById('copyBtn');
+    const originalLabel = button.textContent;
+
+    try {
+        if (navigator.clipboard && window.isSecureContext) {
+            await navigator.clipboard.writeText(lastSvg);
+        } else {
+            const textarea = document.createElement('textarea');
+            textarea.value = lastSvg;
+            textarea.setAttribute('readonly', '');
+            textarea.style.position = 'fixed';
+            textarea.style.opacity = '0';
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+        }
+
+        button.textContent = 'Copied';
+    } catch (error) {
+        button.textContent = 'Try again';
+    }
+
+    window.setTimeout(() => {
+        button.textContent = originalLabel;
+    }, 1400);
+}
+
+/**
  * Toggle section expansion
  */
 function toggleSection(header) {
@@ -596,6 +632,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Button event listeners
     document.getElementById('resetBtn').addEventListener('click', resetToDefaults);
+    document.getElementById('copyBtn').addEventListener('click', copySvg);
     document.getElementById('downloadBtn').addEventListener('click', downloadSvg);
 
     // Map of slider IDs to their value display IDs
