@@ -17,50 +17,33 @@
 
         <aside class="control-panel" aria-label="Graph controls">
             <div class="panel-header">
-                <div class="panel-brand">
-                    <svg class="brand-mark" width="32" height="33" viewBox="0 0 32 33" fill="none" aria-hidden="true">
-                        <path d="M22.5974 16.622L29.1731 12.3661C29.9459 11.8657 30.9773 12.0864 31.4778 12.8592C31.9783 13.6321 31.7575 14.6634 30.9847 15.1639L23.0434 20.3074L9.51873 15.5994L2.53941 19.8856C1.75499 20.3672 0.728809 20.122 0.246857 19.3378C-0.234923 18.5532 0.00994126 17.5256 0.794582 17.0438L9.12273 11.9307L22.5974 16.622Z" fill="currentColor"/>
-                        <path d="M22.5974 4.69132L29.1731 0.435449C29.9459 -0.0650095 30.9773 0.155741 31.4778 0.928553C31.9783 1.70141 31.7575 2.73278 30.9847 3.23325L23.0434 8.3767L9.51873 3.66869L2.53941 7.95491C1.75499 8.43655 0.728809 8.19129 0.246857 7.40718C-0.234923 6.62254 0.00994126 5.59489 0.794582 5.11311L9.12273 0L22.5974 4.69132Z" fill="currentColor"/>
-                        <path d="M22.5974 28.5536L29.1731 24.2978C29.9459 23.7973 30.9773 24.018 31.4778 24.7909C31.9783 25.5637 31.7575 26.5951 30.9847 27.0955L23.0434 32.239L9.51873 27.531L2.53941 31.8172C1.75499 32.2989 0.728809 32.0536 0.246857 31.2695C-0.234923 30.4848 0.00994126 29.4572 0.794582 28.9754L9.12273 23.8623L22.5974 28.5536Z" fill="currentColor"/>
-                    </svg>
-                    <h1>Graph Architect</h1>
-                </div>
+                <h1>Graph</h1>
                 <button class="text-button" type="button" data-action="reset">Reset</button>
             </div>
 
-            <section class="panel-section" aria-labelledby="structure-title">
-                <h2 id="structure-title">Structure</h2>
-
-                <div class="control-group">
-                    <div class="slider-label-row">
-                        <label class="control-label" for="complexity">Complexity</label>
-                        <output class="value-output" id="complexityValue" for="complexity">5</output>
-                    </div>
+            <section class="panel-section" aria-label="Graph structure">
+                <div class="control-group control-row">
+                    <label class="control-label" for="complexity">Complexity</label>
                     <input type="range" id="complexity" class="slider" min="1" max="9" step="1" value="5">
+                    <output class="value-output" id="complexityValue" for="complexity">5</output>
                 </div>
 
-                <div class="control-group">
-                    <div class="slider-label-row">
-                        <label class="control-label" for="columnSpacing">Width</label>
-                        <output class="value-output" id="columnSpacingValue" for="columnSpacing">1.00</output>
-                    </div>
+                <div class="control-group control-row">
+                    <label class="control-label" for="columnSpacing">Width</label>
                     <input type="range" id="columnSpacing" class="slider" min="0.35" max="1.5" step="0.05" value="1">
+                    <output class="value-output" id="columnSpacingValue" for="columnSpacing">1.00</output>
                 </div>
 
-                <div class="control-group">
-                    <div class="slider-label-row">
-                        <label class="control-label" for="rowSpacing">Height</label>
-                        <output class="value-output" id="rowSpacingValue" for="rowSpacing">1.00</output>
-                    </div>
+                <div class="control-group control-row">
+                    <label class="control-label" for="rowSpacing">Height</label>
                     <input type="range" id="rowSpacing" class="slider" min="0.35" max="1.5" step="0.05" value="1">
+                    <output class="value-output" id="rowSpacingValue" for="rowSpacing">1.00</output>
                 </div>
 
-                <div class="control-group">
-                    <div class="slider-label-row">
-                        <label class="control-label" for="nodeBaseSize">Node size</label>
-                        <output class="value-output" id="nodeBaseSizeValue" for="nodeBaseSize">8</output>
-                    </div>
+                <div class="control-group control-row">
+                    <label class="control-label" for="nodeBaseSize">Node size</label>
                     <input type="range" id="nodeBaseSize" class="slider" min="2" max="18" step="0.5" value="8">
+                    <output class="value-output" id="nodeBaseSizeValue" for="nodeBaseSize">8</output>
                 </div>
             </section>
 

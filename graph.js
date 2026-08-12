@@ -22,7 +22,7 @@ const config = {
     nodeColor: '#F3F3F4',
     mergeTolerance: 1,
     showEdgeNodes: true,
-    bgColor: '#1D1A1B',
+    bgColor: '#0B0B0C',
 };
 
 let lastSvg = '';
@@ -50,7 +50,7 @@ const presets = [
     { name: 'Burst', nodes: '1,7,1', columnSpacing: 1.0, rowSpacing: 1.0 },
 ];
 
-const primaryPresetIndexes = [0, 5, 6, 7];
+const primaryPresetIndexes = [0, 1, 4, 7];
 
 // ============================================================================
 // Core Functions
@@ -104,7 +104,7 @@ function readControlsToConfig() {
     config.showEdgeNodes = true;
     config.lineColor = '#F3F3F4';
     config.nodeColor = '#F3F3F4';
-    config.bgColor = '#1D1A1B';
+    config.bgColor = '#0B0B0C';
 
     config.nodesPerColumn = parseNodesPerColumn(nodesInput);
 }
