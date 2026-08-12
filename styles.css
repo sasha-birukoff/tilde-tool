@@ -219,50 +219,49 @@ body {
 }
 
 /* ============================================================================
-   EXPORT BUTTON - Accent color with glow
+   EXPORT BUTTON - Recessed glass treatment
    ============================================================================ */
 
 .btn-export {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: var(--sp-2);
     width: 100%;
+    min-height: 36px;
     padding: 10px 16px;
-    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-bright) 100%);
-    color: var(--bg-base);
-    border: none;
-    border-radius: 10px;
+    overflow: hidden;
+    background: #1b1a23;
+    color: #f3f3f4;
+    border: 1px solid rgba(169, 228, 249, 0.72);
+    border-radius: 6px;
     font-family: var(--font-body);
     font-size: 13px;
     font-weight: 600;
     cursor: pointer;
     transition: all var(--duration-fast) var(--ease-out);
     box-shadow:
-        0 0 12px rgba(69, 116, 140, 0.25),
-        0 0 24px rgba(69, 116, 140, 0.15),
-        0 1px 2px rgba(0, 0, 0, 0.3),
-        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        0 5px 18px rgba(94, 171, 201, 0.10),
+        inset 0 0.5px 14px 3.5px #b6e0f6,
+        inset 0 3.3px 16.6px 5.3px #77a0b6,
+        inset 0 0 22px 15.5px #42697d,
+        inset 0 0.5px 29px 22px #0d191f;
     margin-top: auto;
     margin-bottom: 3px;
 }
 
 .btn-export:hover {
-    background: linear-gradient(135deg, var(--accent-bright) 0%, #d4f1ff 100%);
+    border-color: #a9e4f9;
     transform: translateY(-1px);
     box-shadow:
-        0 0 16px rgba(191, 232, 254, 0.2),
-        0 0 32px rgba(191, 232, 254, 0.15),
-        0 4px 12px rgba(69, 116, 140, 0.15),
-        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+        0 7px 22px rgba(94, 171, 201, 0.16),
+        inset 0 0.5px 14px 3.5px #c8edff,
+        inset 0 3.3px 16.6px 5.3px #86b4cb,
+        inset 0 0 22px 15.5px #4c788e,
+        inset 0 0.5px 29px 22px #101f26;
 }
 
 .btn-export:active {
     transform: translateY(0) scale(0.98);
-}
-
-.btn-export svg {
-    opacity: 0.9;
 }
 
 /* ============================================================================
