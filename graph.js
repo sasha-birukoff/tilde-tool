@@ -22,7 +22,7 @@ const config = {
     nodeColor: '#F3F3F4',
     mergeTolerance: 1,
     showEdgeNodes: true,
-    bgColor: '#050607',
+    bgColor: '#1D1A1B',
 };
 
 let lastSvg = '';
@@ -32,6 +32,7 @@ let generatorRoot = null;
 let scheduledRender = null;
 let renderAnimationTimer = null;
 let toastTimer = null;
+let baseNodesPattern = '1,5,3,5,1';
 
 function getControl(id) {
     return generatorRoot.querySelector(`[id="${id}"]`);
@@ -48,6 +49,8 @@ const presets = [
     { name: 'Horizon', nodes: '1,2,3,5,3,2,1,2,1', columnSpacing: 1.0, rowSpacing: 1.0 },
     { name: 'Burst', nodes: '1,7,1', columnSpacing: 1.0, rowSpacing: 1.0 },
 ];
+
+const primaryPresetIndexes = [0, 5, 6, 7];
 
 // ============================================================================
 // Core Functions
@@ -94,14 +97,14 @@ function readControlsToConfig() {
 
     config.columnSpacing = readNumber('columnSpacing', 1.0);
     config.rowSpacing = readNumber('rowSpacing', 1.0);
-    config.lineThickness = readNumber('lineThickness', 0.5);
     config.nodeBaseSize = readNumber('nodeBaseSize', 8);
-    config.nodeScaleK = readNumber('nodeScaleK', 1);
-    config.mergeTolerance = readNumber('mergeTolerance', 1);
-    config.showEdgeNodes = getControl('showEdgeNodes').checked;
-    config.lineColor = getControl('lineColor').value;
-    config.nodeColor = getControl('nodeColor').value;
-    config.bgColor = getControl('bgColor').value;
+    config.lineThickness = 0.5;
+    config.nodeScaleK = 1;
+    config.mergeTolerance = 1;
+    config.showEdgeNodes = true;
+    config.lineColor = '#F3F3F4';
+    config.nodeColor = '#F3F3F4';
+    config.bgColor = '#1D1A1B';
 
     config.nodesPerColumn = parseNodesPerColumn(nodesInput);
 }
@@ -471,16 +474,30 @@ function applyPreset(index) {
 
     activePresetIndex = index;
 
-    // Update nodes input only - keep other settings as-is
-    getControl('nodesInput').value = preset.nodes;
-
-    // Update preset buttons
-    generatorRoot.querySelectorAll('.preset-button').forEach((btn, i) => {
-        btn.classList.toggle('is-active', i === index);
-        btn.setAttribute('aria-pressed', String(i === index));
-    });
+    baseNodesPattern = preset.nodes;
+    updateNodesFromPattern();
+    syncPresetButtons();
 
     scheduleRender();
+}
+
+function syncPresetButtons() {
+    generatorRoot.querySelectorAll('[data-preset-index]').forEach((button) => {
+        const isActive = Number(button.dataset.presetIndex) === activePresetIndex;
+        button.classList.toggle('is-active', isActive);
+        button.setAttribute('aria-pressed', String(isActive));
+    });
+}
+
+function updateNodesFromPattern() {
+    const complexity = parseInt(getControl('complexity').value, 10) || 5;
+    const factor = 0.5 + ((complexity - 1) / 8);
+    const scaled = parseNodesPerColumn(baseNodesPattern).map((count) => {
+        if (count === 1) return 1;
+        return Math.max(1, Math.min(9, Math.round(count * factor)));
+    });
+
+    getControl('nodesInput').value = scaled.join(',');
 }
 
 /**
@@ -492,13 +509,11 @@ function randomizeNodes() {
     for (let i = 0; i < numColumns; i++) {
         nodes.push(Math.floor(Math.random() * 9) + 1); // 1-9 nodes
     }
-    getControl('nodesInput').value = nodes.join(',');
+    baseNodesPattern = nodes.join(',');
+    updateNodesFromPattern();
 
-    // Clear active preset
-    generatorRoot.querySelectorAll('.preset-button').forEach(btn => {
-        btn.classList.remove('is-active');
-        btn.setAttribute('aria-pressed', 'false');
-    });
+    activePresetIndex = -1;
+    syncPresetButtons();
 
     scheduleRender();
 }
@@ -587,7 +602,10 @@ function startShowcase() {
  * Reset all controls to default values
  */
 function resetToDefaults() {
-    getControl('nodesInput').value = '1,5,3,5,1';
+    baseNodesPattern = '1,5,3,5,1';
+
+    getControl('complexity').value = 5;
+    getControl('complexityValue').textContent = '5';
 
     getControl('columnSpacing').value = 1.0;
     getControl('columnSpacingValue').textContent = '1.00';
@@ -595,27 +613,8 @@ function resetToDefaults() {
     getControl('rowSpacing').value = 1.0;
     getControl('rowSpacingValue').textContent = '1.00';
 
-    getControl('lineThickness').value = 0.5;
-    getControl('lineThicknessValue').textContent = '0.50';
-
     getControl('nodeBaseSize').value = 8.0;
-    getControl('nodeBaseSizeValue').textContent = '8.00';
-
-    getControl('nodeScaleK').value = 1.0;
-    getControl('nodeScaleKValue').textContent = '1.00';
-
-    getControl('mergeTolerance').value = 1;
-    getControl('mergeToleranceValue').textContent = '1.00';
-
-    getControl('showEdgeNodes').checked = true;
-
-    getControl('lineColor').value = '#F3F3F4';
-    getControl('nodeColor').value = '#F3F3F4';
-    getControl('bgColor').value = '#050607';
-
-    getControl('lineColorValue').textContent = 'F3F3F4';
-    getControl('nodeColorValue').textContent = 'F3F3F4';
-    getControl('bgColorValue').textContent = '050607';
+    getControl('nodeBaseSizeValue').textContent = '8';
 
     // Update all slider progress bars
     generatorRoot.querySelectorAll('.slider').forEach(updateSliderProgress);
@@ -660,78 +659,54 @@ function initializeGenerator() {
     if (generatorRoot.dataset.initialized === 'true') return;
     generatorRoot.dataset.initialized = 'true';
 
-    // Generate preset buttons
+    // Generate the complete preset shelf.
     const presetsGrid = generatorRoot.querySelector('[data-presets]');
     presets.forEach((preset, index) => {
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.className = 'preset-button' + (index === 0 ? ' is-active' : '');
-        btn.innerHTML = generatePresetPreview(preset.nodes);
+        btn.innerHTML = `${generatePresetPreview(preset.nodes)}<span class="preset-name">${preset.name}</span>`;
+        btn.dataset.presetIndex = String(index);
         btn.title = preset.name;
         btn.setAttribute('aria-label', `${preset.name} structure`);
         btn.setAttribute('aria-pressed', String(index === 0));
-        btn.addEventListener('click', () => applyPreset(index));
+        btn.addEventListener('click', () => {
+            applyPreset(index);
+            setPresetDrawerOpen(false);
+        });
         presetsGrid.appendChild(btn);
     });
 
-    // Keep compact color labels synchronized with native color inputs.
-    const colorPairs = [
-        { picker: 'lineColor', value: 'lineColorValue' },
-        { picker: 'nodeColor', value: 'nodeColorValue' },
-        { picker: 'bgColor', value: 'bgColorValue' }
-    ];
-
-    colorPairs.forEach(({ picker, value }) => {
-        const pickerElem = getControl(picker);
-        const valueElem = getControl(value);
-
-        pickerElem.addEventListener('input', (e) => {
-            valueElem.textContent = e.target.value.slice(1).toUpperCase();
-            scheduleRender();
-        });
-    });
-
-    // Set up nodes input with auto-comma formatting
-    const nodesInput = getControl('nodesInput');
-    nodesInput.addEventListener('input', (e) => {
-        // Get cursor position before formatting
-        const cursorPos = e.target.selectionStart;
-        const oldValue = e.target.value;
-
-        // Remove all non-digits, then join with commas
-        const digits = oldValue.replace(/[^0-9]/g, '').split('');
-        const formatted = digits.join(',');
-
-        // Update value
-        e.target.value = formatted;
-
-        // Adjust cursor position (account for added commas)
-        const oldCommasBefore = (oldValue.slice(0, cursorPos).match(/,/g) || []).length;
-        const digitsTyped = cursorPos - oldCommasBefore;
-        const newCursorPos = digitsTyped > 0 ? digitsTyped * 2 - 1 : 0;
-        e.target.setSelectionRange(Math.min(newCursorPos + 1, formatted.length), Math.min(newCursorPos + 1, formatted.length));
-
-        // Clear active preset when manually editing
-        generatorRoot.querySelectorAll('.preset-button').forEach(btn => {
-            btn.classList.remove('is-active');
-            btn.setAttribute('aria-pressed', 'false');
-        });
-        scheduleRender();
+    // Keep the four strongest structures immediately available on the canvas.
+    const primaryPresets = generatorRoot.querySelector('[data-primary-presets]');
+    primaryPresetIndexes.forEach((presetIndex) => {
+        const preset = presets[presetIndex];
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'mode-button' + (presetIndex === 0 ? ' is-active' : '');
+        btn.textContent = preset.name;
+        btn.dataset.presetIndex = String(presetIndex);
+        btn.setAttribute('aria-pressed', String(presetIndex === 0));
+        btn.addEventListener('click', () => applyPreset(presetIndex));
+        primaryPresets.appendChild(btn);
     });
 
     generatorRoot.querySelector('[data-action="randomize"]').addEventListener('click', randomizeNodes);
     generatorRoot.querySelector('[data-action="reset"]').addEventListener('click', resetToDefaults);
-    generatorRoot.querySelector('[data-action="regenerate"]').addEventListener('click', regenerate);
     generatorRoot.querySelector('[data-action="download"]').addEventListener('click', downloadSvg);
+
+    generatorRoot.querySelector('[data-action="toggle-presets"]').addEventListener('click', () => {
+        const drawer = generatorRoot.querySelector('[data-preset-drawer]');
+        setPresetDrawerOpen(drawer.hidden);
+    });
+    generatorRoot.querySelector('[data-action="close-presets"]').addEventListener('click', () => setPresetDrawerOpen(false));
 
     // Map of slider IDs to their value display IDs
     const sliderValueMap = {
+        'complexity': 'complexityValue',
         'columnSpacing': 'columnSpacingValue',
         'rowSpacing': 'rowSpacingValue',
-        'lineThickness': 'lineThicknessValue',
-        'nodeBaseSize': 'nodeBaseSizeValue',
-        'nodeScaleK': 'nodeScaleKValue',
-        'mergeTolerance': 'mergeToleranceValue'
+        'nodeBaseSize': 'nodeBaseSizeValue'
     };
 
     // Set up sliders
@@ -745,24 +720,15 @@ function initializeGenerator() {
 
             slider.addEventListener('input', (e) => {
                 const value = parseFloat(e.target.value);
-                valueDisplay.textContent = value.toFixed(2);
+                valueDisplay.textContent = sliderId === 'complexity'
+                    ? String(Math.round(value))
+                    : sliderId === 'nodeBaseSize'
+                        ? value.toFixed(value % 1 === 0 ? 0 : 1)
+                        : value.toFixed(2);
                 updateSliderProgress(slider);
+                if (sliderId === 'complexity') updateNodesFromPattern();
                 scheduleRender();
             });
-        }
-    });
-
-    // Real-time preview update on control changes
-    const controls = ['showEdgeNodes', 'lineColor', 'nodeColor', 'bgColor'];
-
-    controls.forEach(id => {
-        const elem = getControl(id);
-        if (elem) {
-            if (elem.type === 'checkbox') {
-                elem.addEventListener('change', scheduleRender);
-            } else {
-                elem.addEventListener('input', scheduleRender);
-            }
         }
     });
 
@@ -791,6 +757,7 @@ function initializeGenerator() {
 
     // Showcase mode - press 'D' to trigger demo animation
     document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') setPresetDrawerOpen(false);
         if ((e.key === 'd' || e.key === 'D') && !e.ctrlKey && !e.metaKey && !e.altKey) {
             // Don't trigger if typing in an input
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
@@ -800,6 +767,13 @@ function initializeGenerator() {
 
     // Initialize with defaults
     resetToDefaults();
+}
+
+function setPresetDrawerOpen(isOpen) {
+    const drawer = generatorRoot.querySelector('[data-preset-drawer]');
+    const toggle = generatorRoot.querySelector('[data-action="toggle-presets"]');
+    drawer.hidden = !isOpen;
+    toggle.setAttribute('aria-expanded', String(isOpen));
 }
 
 if (document.readyState === 'loading') {
