@@ -11,29 +11,36 @@ const config = {
     marginTop: 100,
     marginBottom: 100,
     columnSpacing: 1.0,
-    rowSpacing: 1.0,
+    rowSpacing: 0.5,
     lineThickness: 0.5,
-    lineColor: '#F3F3F4',
-    nodeBaseSize: 8.0,
+    lineColor: '#575757',
+    nodeBaseSize: 5.5,
     nodeScaleK: 1.0,
     nodeColor: '#F3F3F4',
     mergeTolerance: 1,
     showEdgeNodes: true,
     bgColor: '#010204',
+    animationEnabled: true,
+    animationDuration: 9,
+    waveWidth: 0.9,
+    fadeSpeed: 5,
+    wavePattern: 'sequence',
+    inactiveNodeColor: '#454545',
+    activeNodeColor: '#AFF3F8',
 };
 
 let lastSvg = '';
 let lastStats = { nodes: 0, edges: 0, intersections: 0 };
 let activePresetIndex = 0;
+let animationFrameId = null;
+let animationStartTime = null;
+let animationPausedAt = 0;
+let animationPlaying = true;
 
 // Preset configurations
 const presets = [
     { name: 'Diamond', nodes: '1,5,3,5,1', columnSpacing: 1.0, rowSpacing: 1.0 },
-    { name: 'Cube', nodes: '5,5,5', columnSpacing: 1.0, rowSpacing: 1.0 },
-    { name: 'Wave', nodes: '1,2,3,7,3,2,1', columnSpacing: 1.0, rowSpacing: 1.0 },
-    { name: 'Pulse', nodes: '1,3,1,7,1,3,1', columnSpacing: 1.0, rowSpacing: 1.0 },
     { name: 'Bow', nodes: '8,3,8', columnSpacing: 1.0, rowSpacing: 1.0 },
-    { name: 'Grid', nodes: '4,4,4,4', columnSpacing: 1.0, rowSpacing: 1.0 },
     { name: 'Pinch', nodes: '3,1,3', columnSpacing: 1.0, rowSpacing: 1.0 },
     { name: 'Burst', nodes: '1,8,1', columnSpacing: 1.0, rowSpacing: 1.0 },
 ];
@@ -76,16 +83,9 @@ function parseNodesPerColumn(inputStr) {
 function readControlsToConfig() {
     const nodesInput = document.getElementById('nodesInput').value;
 
-    config.columnSpacing = parseFloat(document.getElementById('columnSpacing').value) || 1.0;
-    config.rowSpacing = parseFloat(document.getElementById('rowSpacing').value) || 1.0;
-    config.lineThickness = parseFloat(document.getElementById('lineThickness').value) || 0.5;
+    config.columnSpacing = Math.max(0.05, parseFloat(document.getElementById('columnSpacing').value) || 0.05);
+    config.rowSpacing = Math.max(0.05, parseFloat(document.getElementById('rowSpacing').value) || 0.05);
     config.nodeBaseSize = parseFloat(document.getElementById('nodeBaseSize').value) || 2;
-    config.nodeScaleK = parseFloat(document.getElementById('nodeScaleK').value) || 0.4;
-    config.mergeTolerance = parseFloat(document.getElementById('mergeTolerance').value) || 1;
-    config.showEdgeNodes = document.getElementById('showEdgeNodes').checked;
-    config.lineColor = document.getElementById('lineColor').value;
-    config.nodeColor = document.getElementById('nodeColor').value;
-    config.bgColor = document.getElementById('bgColor').value;
 
     config.nodesPerColumn = parseNodesPerColumn(nodesInput);
 }
@@ -247,7 +247,7 @@ function buildSvg(nodes, edges, intersections, cfg) {
     for (const edge of edges) {
         const node1 = nodes[edge.a];
         const node2 = nodes[edge.b];
-        svgContent += `<line x1="${node1.x}" y1="${node1.y}" x2="${node2.x}" y2="${node2.y}" ` +
+        svgContent += `<line class="graph-line" x1="${node1.x}" y1="${node1.y}" x2="${node2.x}" y2="${node2.y}" ` +
             `stroke="${cfg.lineColor}" stroke-width="${cfg.lineThickness}" fill="none" />`;
     }
 
@@ -255,7 +255,7 @@ function buildSvg(nodes, edges, intersections, cfg) {
         const size = cfg.nodeBaseSize + cfg.nodeScaleK * inter.count;
         if (size > 0) {
             const half = size / 2;
-            svgContent += `<rect x="${inter.x - half}" y="${inter.y - half}" ` +
+            svgContent += `<rect class="graph-node" data-node-x="${inter.x}" data-node-y="${inter.y}" x="${inter.x - half}" y="${inter.y - half}" ` +
                 `width="${size}" height="${size}" fill="${cfg.nodeColor}" />`;
         }
     }
@@ -272,7 +272,7 @@ function buildSvg(nodes, edges, intersections, cfg) {
         const size = cfg.nodeBaseSize + cfg.nodeScaleK * node.degree;
         if (size > 0) {
             const half = size / 2;
-            svgContent += `<rect x="${node.x - half}" y="${node.y - half}" ` +
+            svgContent += `<rect class="graph-node" data-node-x="${node.x}" data-node-y="${node.y}" x="${node.x - half}" y="${node.y - half}" ` +
                 `width="${size}" height="${size}" fill="${cfg.nodeColor}" />`;
         }
     }
@@ -398,12 +398,104 @@ function render() {
 
     const preview = document.getElementById('preview');
     preview.innerHTML = lastSvg;
-
-    // Apply background to the entire canvas area (not included in SVG export)
-    document.querySelector('.canvas-area').style.backgroundColor = config.bgColor;
+    applyAnimationFrame(animationPlaying ? getAnimationProgress() : animationPausedAt);
 
     // Update stats
     updateStats(nodes.length, edges.length, intersections.length);
+}
+
+// Generation 7 live node-wave animation.
+const clamp01 = value => Math.max(0, Math.min(1, value));
+
+function smoothstep(min, max, value) {
+    const unit = clamp01((value - min) / (max - min));
+    return unit * unit * (3 - 2 * unit);
+}
+
+function gaussian(distance, width) {
+    return Math.exp(-(distance * distance) / (2 * width * width));
+}
+
+function windowedWave(coordinate, progress, start, end, from, to, width) {
+    const local = smoothstep(start, end, progress);
+    const center = from + (to - from) * local;
+    const fadeInCenter = start + 0.025;
+    const fadeOutCenter = end - 0.01;
+    const fadeInHalfWidth = 0.075 / config.fadeSpeed;
+    const fadeOutHalfWidth = 0.09 / config.fadeSpeed;
+    const fadeIn = smoothstep(fadeInCenter - fadeInHalfWidth, fadeInCenter + fadeInHalfWidth, progress);
+    const fadeOut = 1 - smoothstep(fadeOutCenter - fadeOutHalfWidth, fadeOutCenter + fadeOutHalfWidth, progress);
+    return gaussian(coordinate - center, width * config.waveWidth) * fadeIn * fadeOut;
+}
+
+function waveEnergy(nx, ny, progress) {
+    const radial = windowedWave(Math.hypot(nx, ny), progress, 0.08, 0.27, -0.08, 1.30, 0.16);
+    const forward = windowedWave(nx * 0.72 - ny * 0.70, progress, 0.36, 0.59, -1.18, 1.18, 0.18);
+    const backward = windowedWave(nx * 0.72 + ny * 0.70, progress, 0.69, 0.94, 1.22, -1.22, 0.17);
+    const echo = windowedWave(nx * 0.45 - ny * 0.30, progress, 0.70, 0.98, -0.95, 0.95, 0.28) * 0.22;
+
+    if (config.wavePattern === 'radial') return radial;
+    if (config.wavePattern === 'diagonal-forward') return windowedWave(nx * 0.72 - ny * 0.70, progress, 0.08, 0.92, -1.18, 1.18, 0.18);
+    if (config.wavePattern === 'diagonal-back') return windowedWave(nx * 0.72 + ny * 0.70, progress, 0.08, 0.92, 1.18, -1.18, 0.17);
+    return clamp01(Math.max(radial, forward, backward, echo));
+}
+
+function hexToRgb(hex) {
+    const normalized = hex.replace('#', '');
+    return {
+        r: parseInt(normalized.slice(0, 2), 16),
+        g: parseInt(normalized.slice(2, 4), 16),
+        b: parseInt(normalized.slice(4, 6), 16),
+    };
+}
+
+function mixColors(fromHex, toHex, amount) {
+    const from = hexToRgb(fromHex);
+    const to = hexToRgb(toHex);
+    const channel = key => Math.round(from[key] + (to[key] - from[key]) * amount);
+    return `rgb(${channel('r')}, ${channel('g')}, ${channel('b')})`;
+}
+
+function applyAnimationFrame(progress) {
+    const preview = document.getElementById('preview');
+    if (!preview) return;
+
+    preview.querySelectorAll('.graph-line').forEach(line => line.setAttribute('stroke', config.lineColor));
+    preview.querySelectorAll('.graph-node').forEach(node => {
+        if (!config.animationEnabled) {
+            node.setAttribute('fill', config.nodeColor);
+            return;
+        }
+        const x = Number(node.dataset.nodeX);
+        const y = Number(node.dataset.nodeY);
+        const halfSpan = Math.max((config.svgWidth - config.marginLeft - config.marginRight) / 2, (config.svgHeight - config.marginTop - config.marginBottom) / 2);
+        const nx = (x - config.svgWidth / 2) / halfSpan;
+        const ny = (y - config.svgHeight / 2) / halfSpan;
+        node.setAttribute('fill', mixColors(config.inactiveNodeColor, config.activeNodeColor, waveEnergy(nx, ny, progress)));
+    });
+}
+
+function getAnimationProgress(timestamp = performance.now()) {
+    if (animationStartTime === null) animationStartTime = timestamp;
+    return ((timestamp - animationStartTime) / (config.animationDuration * 1000)) % 1;
+}
+
+function animationLoop(timestamp) {
+    if (animationPlaying && config.animationEnabled) {
+        animationPausedAt = getAnimationProgress(timestamp);
+        applyAnimationFrame(animationPausedAt);
+    }
+    animationFrameId = requestAnimationFrame(animationLoop);
+}
+
+function restartAnimation() {
+    animationStartTime = performance.now();
+    animationPausedAt = 0;
+    applyAnimationFrame(0);
+}
+
+function updatePlayPauseButton() {
+    document.getElementById('playPauseBtn').textContent = animationPlaying ? 'Pause' : 'Play';
 }
 
 /**
@@ -416,7 +508,7 @@ function applyPreset(index) {
     activePresetIndex = index;
 
     // Update nodes input only - keep other settings as-is
-    document.getElementById('nodesInput').value = preset.nodes;
+    document.getElementById('nodesInput').value = preset.nodes.replaceAll(',', ', ');
 
     // Update preset buttons
     document.querySelectorAll('.preset-btn').forEach((btn, i) => {
@@ -433,9 +525,9 @@ function randomizeNodes() {
     const numColumns = Math.floor(Math.random() * 4) + 3; // 3-6 columns
     const nodes = [];
     for (let i = 0; i < numColumns; i++) {
-        nodes.push(Math.floor(Math.random() * 7) + 1); // 1-7 nodes
+        nodes.push(Math.floor(Math.random() * 5) + 1); // 1-5 nodes
     }
-    document.getElementById('nodesInput').value = nodes.join(',');
+    document.getElementById('nodesInput').value = nodes.join(', ');
 
     // Clear active preset
     document.querySelectorAll('.preset-btn').forEach(btn => btn.classList.remove('active'));
@@ -443,48 +535,20 @@ function randomizeNodes() {
     render();
 }
 
-/**
- * Reset all controls to default values
- */
-function resetToDefaults() {
-    document.getElementById('nodesInput').value = '1,5,3,5,1';
-
-    document.getElementById('columnSpacing').value = 1.0;
-    document.getElementById('columnSpacingValue').textContent = '1.00';
-
-    document.getElementById('rowSpacing').value = 1.0;
-    document.getElementById('rowSpacingValue').textContent = '1.00';
-
-    document.getElementById('lineThickness').value = 0.5;
-    document.getElementById('lineThicknessValue').textContent = '0.50';
-
-    document.getElementById('nodeBaseSize').value = 8.0;
-    document.getElementById('nodeBaseSizeValue').textContent = '8.00';
-
-    document.getElementById('nodeScaleK').value = 1.0;
-    document.getElementById('nodeScaleKValue').textContent = '1.00';
-
-    document.getElementById('mergeTolerance').value = 1;
-    document.getElementById('mergeToleranceValue').textContent = '1.00';
-
-    document.getElementById('showEdgeNodes').checked = true;
-
-    document.getElementById('lineColor').value = '#F3F3F4';
-    document.getElementById('lineColorHex').value = '#F3F3F4';
-
-    document.getElementById('nodeColor').value = '#F3F3F4';
-    document.getElementById('nodeColorHex').value = '#F3F3F4';
-
-    document.getElementById('bgColor').value = '#010204';
-    document.getElementById('bgColorHex').value = '#010204';
-
-    // Update all slider progress bars
+function resetGenerator() {
+    document.getElementById('columnSpacing').value = '1';
+    document.getElementById('rowSpacing').value = '0.5';
+    document.getElementById('nodeBaseSize').value = '5.5';
+    document.getElementById('columnSpacingValue').textContent = '100%';
+    document.getElementById('rowSpacingValue').textContent = '50%';
+    document.getElementById('nodeBaseSizeValue').textContent = '5.5';
     document.querySelectorAll('.slider').forEach(updateSliderProgress);
-
-    // Set first preset as active
     applyPreset(0);
 }
 
+/**
+ * Reset all controls to default values
+ */
 /**
  * Download SVG as file
  */
@@ -540,18 +604,6 @@ async function copySvg() {
     }, 1400);
 }
 
-/**
- * Toggle section expansion
- */
-function toggleSection(header) {
-    const section = header.closest('.panel-section');
-    const content = section.querySelector('.section-content');
-    const isExpanded = header.dataset.expanded === 'true';
-
-    header.dataset.expanded = !isExpanded;
-    content.classList.toggle('collapsed', isExpanded);
-}
-
 // ============================================================================
 // Initialize on Page Load
 // ============================================================================
@@ -568,40 +620,6 @@ document.addEventListener('DOMContentLoaded', () => {
         presetsGrid.appendChild(btn);
     });
 
-    // Set up section headers
-    document.querySelectorAll('.section-header').forEach(header => {
-        header.addEventListener('click', () => toggleSection(header));
-    });
-
-    // Set up color picker and HEX input synchronization
-    const colorPairs = [
-        { picker: 'lineColor', hex: 'lineColorHex' },
-        { picker: 'nodeColor', hex: 'nodeColorHex' },
-        { picker: 'bgColor', hex: 'bgColorHex' }
-    ];
-
-    colorPairs.forEach(({ picker, hex }) => {
-        const pickerElem = document.getElementById(picker);
-        const hexElem = document.getElementById(hex);
-
-        pickerElem.addEventListener('input', (e) => {
-            hexElem.value = e.target.value.toUpperCase();
-            render();
-        });
-
-        hexElem.addEventListener('input', (e) => {
-            let value = e.target.value.trim();
-            if (value && !value.startsWith('#')) {
-                value = '#' + value;
-            }
-            if (/^#[0-9A-F]{6}$/i.test(value)) {
-                pickerElem.value = value;
-                hexElem.value = value.toUpperCase();
-                render();
-            }
-        });
-    });
-
     // Set up nodes input with auto-comma formatting
     const nodesInput = document.getElementById('nodesInput');
     nodesInput.addEventListener('input', (e) => {
@@ -609,18 +627,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const cursorPos = e.target.selectionStart;
         const oldValue = e.target.value;
 
-        // Remove all non-digits, then join with commas
+        // Remove all non-digits, then restore the designed comma spacing.
         const digits = oldValue.replace(/[^0-9]/g, '').split('');
-        const formatted = digits.join(',');
+        const formatted = digits.join(', ');
 
         // Update value
         e.target.value = formatted;
 
         // Adjust cursor position (account for added commas)
-        const oldCommasBefore = (oldValue.slice(0, cursorPos).match(/,/g) || []).length;
-        const digitsTyped = cursorPos - oldCommasBefore;
-        const newCursorPos = digitsTyped > 0 ? digitsTyped * 2 - 1 : 0;
-        e.target.setSelectionRange(Math.min(newCursorPos + 1, formatted.length), Math.min(newCursorPos + 1, formatted.length));
+        const digitsTyped = (oldValue.slice(0, cursorPos).match(/\d/g) || []).length;
+        const newCursorPos = digitsTyped > 0 ? digitsTyped * 3 - 2 : 0;
+        e.target.setSelectionRange(Math.min(newCursorPos, formatted.length), Math.min(newCursorPos, formatted.length));
 
         // Clear active preset when manually editing
         document.querySelectorAll('.preset-btn').forEach(btn => btn.classList.remove('active'));
@@ -629,20 +646,69 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Set up randomize button
     document.getElementById('randomizeBtn').addEventListener('click', randomizeNodes);
+    document.getElementById('resetBtn').addEventListener('click', resetGenerator);
 
     // Button event listeners
-    document.getElementById('resetBtn').addEventListener('click', resetToDefaults);
     document.getElementById('copyBtn').addEventListener('click', copySvg);
     document.getElementById('downloadBtn').addEventListener('click', downloadSvg);
+
+    document.getElementById('animationEnabled').addEventListener('change', event => {
+        config.animationEnabled = event.target.checked;
+        if (config.animationEnabled) restartAnimation();
+        else applyAnimationFrame(0);
+    });
+
+    document.getElementById('playPauseBtn').addEventListener('click', () => {
+        animationPlaying = !animationPlaying;
+        if (animationPlaying) animationStartTime = performance.now() - animationPausedAt * config.animationDuration * 1000;
+        updatePlayPauseButton();
+    });
+
+    document.getElementById('restartAnimationBtn').addEventListener('click', restartAnimation);
+
+    document.getElementById('animationDuration').addEventListener('input', event => {
+        config.animationDuration = Number(event.target.value);
+        document.getElementById('animationDurationValue').textContent = `${Number(config.animationDuration.toFixed(1))}s`;
+        restartAnimation();
+    });
+
+    document.getElementById('waveWidth').addEventListener('input', event => {
+        config.waveWidth = Number(event.target.value);
+        document.getElementById('waveWidthValue').textContent = config.waveWidth.toFixed(2);
+        applyAnimationFrame(animationPausedAt);
+    });
+
+    document.getElementById('fadeSpeed').addEventListener('input', event => {
+        config.fadeSpeed = Number(event.target.value);
+        document.getElementById('fadeSpeedValue').textContent = `${Number(config.fadeSpeed.toFixed(1))}×`;
+        applyAnimationFrame(animationPausedAt);
+    });
+
+    document.getElementById('wavePattern').addEventListener('change', event => {
+        config.wavePattern = event.target.value;
+        restartAnimation();
+    });
+
+    document.getElementById('lineColor').addEventListener('input', event => {
+        config.lineColor = event.target.value.toUpperCase();
+        render();
+    });
+
+    document.getElementById('inactiveNodeColor').addEventListener('input', event => {
+        config.inactiveNodeColor = event.target.value;
+        applyAnimationFrame(animationPausedAt);
+    });
+
+    document.getElementById('activeNodeColor').addEventListener('input', event => {
+        config.activeNodeColor = event.target.value;
+        applyAnimationFrame(animationPausedAt);
+    });
 
     // Map of slider IDs to their value display IDs
     const sliderValueMap = {
         'columnSpacing': 'columnSpacingValue',
         'rowSpacing': 'rowSpacingValue',
-        'lineThickness': 'lineThicknessValue',
-        'nodeBaseSize': 'nodeBaseSizeValue',
-        'nodeScaleK': 'nodeScaleKValue',
-        'mergeTolerance': 'mergeToleranceValue'
+        'nodeBaseSize': 'nodeBaseSizeValue'
     };
 
     // Set up sliders
@@ -656,27 +722,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
             slider.addEventListener('input', (e) => {
                 const value = parseFloat(e.target.value);
-                valueDisplay.textContent = value.toFixed(2);
+                valueDisplay.textContent = sliderId === 'nodeBaseSize'
+                    ? Number(value.toFixed(1)).toString()
+                    : `${Math.round(value * 100)}%`;
                 updateSliderProgress(slider);
                 render();
             });
         }
     });
 
-    // Real-time preview update on control changes
-    const controls = ['showEdgeNodes', 'lineColor', 'nodeColor', 'bgColor'];
-
-    controls.forEach(id => {
-        const elem = document.getElementById(id);
-        if (elem) {
-            if (elem.type === 'checkbox') {
-                elem.addEventListener('change', render);
-            } else {
-                elem.addEventListener('input', render);
-            }
-        }
-    });
-
-    // Initialize with defaults
-    resetToDefaults();
+    // Initialize with defaults.
+    document.querySelectorAll('.slider').forEach(updateSliderProgress);
+    applyPreset(0);
+    updatePlayPauseButton();
+    if (animationFrameId === null) animationFrameId = requestAnimationFrame(animationLoop);
 });
