@@ -36,6 +36,8 @@ let animationFrameId = null;
 let animationStartTime = null;
 let animationPausedAt = 0;
 let animationPlaying = true;
+let exportInProgress = false;
+let cancelRequested = false;
 
 // Preset configurations
 const presets = [
@@ -568,6 +570,163 @@ function downloadSvg() {
     URL.revokeObjectURL(url);
 }
 
+function downloadBlob(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function updateExportSummary() {
+    const format = document.querySelector('input[name="exportFormat"]:checked')?.value || 'webm';
+    const summary = document.getElementById('exportSummary');
+    if (format === 'svg') {
+        summary.innerHTML = '<span>SVG</span><span>Static vector · transparent background</span>';
+    } else {
+        summary.innerHTML = `<span>WebM</span><span>1080 × 1080 · 30 fps · ${Number(config.animationDuration.toFixed(1))}s</span>`;
+    }
+}
+
+function setExportView(isOpen) {
+    if (exportInProgress && !isOpen) return;
+    document.getElementById('editorView').hidden = isOpen;
+    document.getElementById('exportView').hidden = !isOpen;
+    if (isOpen) {
+        updateExportSummary();
+        document.getElementById('closeExportBtn').focus();
+    } else {
+        document.getElementById('downloadBtn').focus();
+    }
+}
+
+function drawExportFrame(context, canvas, progress) {
+    applyAnimationFrame(progress);
+    const svg = document.querySelector('#preview svg');
+    if (!svg) return;
+
+    const viewBox = svg.viewBox.baseVal;
+    const padding = 54;
+    const scale = Math.min((canvas.width - padding * 2) / viewBox.width, (canvas.height - padding * 2) / viewBox.height);
+    const offsetX = (canvas.width - viewBox.width * scale) / 2 - viewBox.x * scale;
+    const offsetY = (canvas.height - viewBox.height * scale) / 2 - viewBox.y * scale;
+
+    context.setTransform(1, 0, 0, 1, 0, 0);
+    context.fillStyle = config.bgColor;
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.setTransform(scale, 0, 0, scale, offsetX, offsetY);
+
+    svg.querySelectorAll('.graph-line').forEach(line => {
+        context.beginPath();
+        context.moveTo(Number(line.getAttribute('x1')), Number(line.getAttribute('y1')));
+        context.lineTo(Number(line.getAttribute('x2')), Number(line.getAttribute('y2')));
+        context.strokeStyle = line.getAttribute('stroke');
+        context.lineWidth = Number(line.getAttribute('stroke-width'));
+        context.stroke();
+    });
+
+    svg.querySelectorAll('.graph-node').forEach(node => {
+        context.fillStyle = node.getAttribute('fill');
+        context.fillRect(
+            Number(node.getAttribute('x')),
+            Number(node.getAttribute('y')),
+            Number(node.getAttribute('width')),
+            Number(node.getAttribute('height'))
+        );
+    });
+}
+
+async function exportWebm() {
+    const mimeTypes = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'];
+    const mimeType = mimeTypes.find(type => MediaRecorder.isTypeSupported(type));
+    if (!mimeType) throw new Error('WebM recording is not supported in this browser.');
+
+    const canvas = document.createElement('canvas');
+    canvas.width = 1080;
+    canvas.height = 1080;
+    const context = canvas.getContext('2d');
+    const stream = canvas.captureStream(30);
+    const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 8_000_000 });
+    const chunks = [];
+    const durationMs = config.animationDuration * 1000;
+    const wasPlaying = animationPlaying;
+    animationPlaying = false;
+    cancelRequested = false;
+
+    recorder.addEventListener('dataavailable', event => {
+        if (event.data.size) chunks.push(event.data);
+    });
+
+    const stopped = new Promise((resolve, reject) => {
+        recorder.addEventListener('stop', resolve, { once: true });
+        recorder.addEventListener('error', () => reject(recorder.error), { once: true });
+    });
+
+    drawExportFrame(context, canvas, 0);
+    recorder.start(250);
+    const startedAt = performance.now();
+    const exportButton = document.getElementById('confirmExportBtn');
+
+    await new Promise(resolve => {
+        const capture = now => {
+            const elapsed = now - startedAt;
+            const progress = Math.min(elapsed / durationMs, 1);
+            drawExportFrame(context, canvas, progress % 1);
+            exportButton.textContent = `Exporting ${Math.round(progress * 100)}%`;
+            if (progress >= 1 || cancelRequested) resolve();
+            else requestAnimationFrame(capture);
+        };
+        requestAnimationFrame(capture);
+    });
+
+    recorder.stop();
+    await stopped;
+    stream.getTracks().forEach(track => track.stop());
+
+    if (!cancelRequested) {
+        downloadBlob(new Blob(chunks, { type: mimeType }), 'tilde-graph.webm');
+    }
+
+    animationPlaying = wasPlaying;
+    if (wasPlaying) restartAnimation();
+    else applyAnimationFrame(animationPausedAt);
+}
+
+async function confirmExport() {
+    if (exportInProgress) return;
+    const format = document.querySelector('input[name="exportFormat"]:checked')?.value || 'webm';
+    if (format === 'svg') {
+        downloadSvg();
+        setExportView(false);
+        return;
+    }
+
+    const button = document.getElementById('confirmExportBtn');
+    const cancelButton = document.getElementById('cancelExportBtn');
+    let completed = false;
+    exportInProgress = true;
+    button.disabled = true;
+    cancelButton.textContent = 'Cancel export';
+    try {
+        await exportWebm();
+        completed = !cancelRequested;
+    } catch (error) {
+        button.textContent = 'Not supported';
+        console.error(error);
+        await new Promise(resolve => window.setTimeout(resolve, 1400));
+    } finally {
+        exportInProgress = false;
+        cancelRequested = false;
+        button.disabled = false;
+        button.textContent = 'Export';
+        cancelButton.textContent = 'Cancel';
+        if (completed) setExportView(false);
+    }
+}
+
 /**
  * Copy SVG markup to the clipboard
  */
@@ -650,7 +809,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Button event listeners
     document.getElementById('copyBtn').addEventListener('click', copySvg);
-    document.getElementById('downloadBtn').addEventListener('click', downloadSvg);
+    document.getElementById('downloadBtn').addEventListener('click', () => setExportView(true));
+    document.getElementById('closeExportBtn').addEventListener('click', () => setExportView(false));
+    document.getElementById('cancelExportBtn').addEventListener('click', () => {
+        if (exportInProgress) cancelRequested = true;
+        else setExportView(false);
+    });
+    document.getElementById('confirmExportBtn').addEventListener('click', confirmExport);
+    document.querySelectorAll('input[name="exportFormat"]').forEach(input => {
+        input.addEventListener('change', updateExportSummary);
+    });
+    document.addEventListener('keydown', event => {
+        if (event.key === 'Escape' && !document.getElementById('exportView').hidden) setExportView(false);
+    });
 
     document.getElementById('animationEnabled').addEventListener('change', event => {
         config.animationEnabled = event.target.checked;

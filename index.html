@@ -10,6 +10,7 @@
     <div class="main-container">
         <!-- Floating Control Panel -->
         <aside class="control-panel">
+          <div class="panel-view editor-view" id="editorView">
             <!-- Presets Section -->
             <section class="panel-section presets-section">
                 <h2 class="section-title">Presets</h2>
@@ -115,6 +116,46 @@
                 <button class="btn-copy" id="copyBtn">Copy</button>
                 <button class="btn-export" id="downloadBtn">Export</button>
             </div>
+          </div>
+
+          <section class="panel-view export-view" id="exportView" aria-labelledby="exportTitle" hidden>
+              <header class="export-header">
+                  <div>
+                      <p class="export-eyebrow">Output</p>
+                      <h2 id="exportTitle">Export</h2>
+                  </div>
+                  <button class="export-close" id="closeExportBtn" type="button" aria-label="Close export settings">×</button>
+              </header>
+
+              <fieldset class="format-options">
+                  <legend>Format</legend>
+                  <label class="format-option">
+                      <input type="radio" name="exportFormat" value="svg">
+                      <span class="format-copy"><strong>SVG</strong><small>Static vector</small></span>
+                      <span class="format-mark" aria-hidden="true"></span>
+                  </label>
+                  <label class="format-option">
+                      <input type="radio" name="exportFormat" value="webm" checked>
+                      <span class="format-copy"><strong>WebM</strong><small>Animated · one seamless loop</small></span>
+                      <span class="format-mark" aria-hidden="true"></span>
+                  </label>
+                  <label class="format-option is-disabled">
+                      <input type="radio" name="exportFormat" value="mp4" disabled>
+                      <span class="format-copy"><strong>MP4</strong><small>Coming soon</small></span>
+                      <span class="format-badge">Soon</span>
+                  </label>
+              </fieldset>
+
+              <div class="export-summary" id="exportSummary">
+                  <span>WebM</span>
+                  <span>1080 × 1080 · 30 fps · 9s</span>
+              </div>
+
+              <div class="export-actions">
+                  <button class="btn-copy" id="cancelExportBtn" type="button">Cancel</button>
+                  <button class="btn-export" id="confirmExportBtn" type="button">Export</button>
+              </div>
+          </section>
         </aside>
 
         <!-- Canvas Area -->

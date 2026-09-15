@@ -14,6 +14,7 @@ html, body { width: 100%; height: 100%; overflow: hidden; }
 body { color: var(--text); background: var(--bg); font-family: var(--sans); -webkit-font-smoothing: antialiased; }
 button, input { font: inherit; }
 button { -webkit-tap-highlight-color: transparent; }
+[hidden] { display: none !important; }
 .main-container { position: relative; width: 100%; height: 100%; }
 
 .control-panel {
@@ -23,6 +24,7 @@ button { -webkit-tap-highlight-color: transparent; }
     max-height: calc(100vh - 48px); overflow-y: auto; scrollbar-width: none;
 }
 .control-panel::-webkit-scrollbar { display: none; }
+.panel-view { display: flex; flex-direction: column; gap: var(--panel-gap); }
 .panel-section { display: flex; flex-direction: column; }
 .section-title, .control-label {
     font-family: var(--mono); font-size: 10px; line-height: 1; font-weight: 400;
@@ -97,6 +99,51 @@ button { -webkit-tap-highlight-color: transparent; }
     box-shadow: 0 7px 24px rgba(94,171,201,.16), inset 0 .6px 19px 4.7px #c6ebff,
         inset 0 4.4px 22px 7px #83abc0, inset 0 0 29px 20px #496f82, inset 0 .6px 38px 29px #101d23;
 }
+
+.export-view { min-height: 490px; }
+.export-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.export-eyebrow, .format-options legend {
+    color: var(--muted); font: 9px/1 var(--mono); letter-spacing: 1.2px; text-transform: uppercase;
+}
+.export-header h2 { margin-top: 7px; font-size: 24px; line-height: 1; font-weight: 600; letter-spacing: -.3px; }
+.export-close {
+    width: 30px; height: 30px; display: grid; place-items: center; flex: 0 0 auto;
+    color: var(--muted); background: transparent; border: 1px solid var(--border); border-radius: 7px;
+    font-size: 20px; line-height: 1; cursor: pointer;
+}
+.export-close:hover { color: var(--text); border-color: var(--border-strong); }
+.export-close:focus-visible, .format-option:has(input:focus-visible), .export-actions button:focus-visible {
+    outline: 1px solid var(--blue-2); outline-offset: 2px;
+}
+.format-options { display: flex; flex-direction: column; gap: 8px; border: 0; }
+.format-options legend { margin-bottom: 10px; }
+.format-option {
+    min-height: 68px; padding: 13px 14px; display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 12px;
+    color: var(--text); background: #0b0b0c; border: 1px solid var(--border); border-radius: 8px; cursor: pointer;
+    transition: border-color 150ms ease, background-color 150ms ease, box-shadow 150ms ease;
+}
+.format-option:hover { border-color: var(--border-strong); }
+.format-option:has(input:checked) {
+    background: rgba(77,129,155,.14); border-color: #5b99b6; box-shadow: 0 6px 18px rgba(94,171,201,.08);
+}
+.format-option input { position: absolute; opacity: 0; pointer-events: none; }
+.format-copy { display: flex; flex-direction: column; gap: 5px; }
+.format-copy strong { font-size: 14px; line-height: 1; font-weight: 600; text-transform: uppercase; }
+.format-copy small { color: var(--muted); font-size: 10px; line-height: 1.2; }
+.format-mark { width: 12px; height: 12px; border: 1px solid var(--border-strong); border-radius: 50%; }
+.format-option:has(input:checked) .format-mark { border: 3px solid var(--blue-2); box-shadow: 0 0 0 2px rgba(191,232,254,.08); }
+.format-option.is-disabled { cursor: not-allowed; opacity: .48; }
+.format-badge {
+    padding: 4px 6px; color: var(--muted); background: rgba(255,255,255,.05); border-radius: 99px;
+    font: 8px/1 var(--mono); letter-spacing: .6px; text-transform: uppercase;
+}
+.export-summary {
+    padding-top: 12px; display: flex; flex-direction: column; gap: 6px; border-top: 1px solid var(--border);
+    color: var(--muted); font: 9px/1.35 var(--mono); letter-spacing: .5px;
+}
+.export-summary span:first-child { color: var(--text); text-transform: uppercase; }
+.export-actions { margin-top: auto; display: grid; grid-template-columns: 1fr 1.18fr; gap: 8px; }
+.export-actions button:disabled { cursor: wait; opacity: .72; }
 
 .motion-section { display: flex; flex-direction: column; gap: 8px; }
 .motion-title {
