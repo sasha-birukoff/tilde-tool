@@ -11,10 +11,10 @@ const config = {
     marginTop: 100,
     marginBottom: 100,
     columnSpacing: 1.0,
-    rowSpacing: 0.5,
+    rowSpacing: 1.0,
     lineThickness: 0.5,
-    lineColor: '#575757',
-    nodeBaseSize: 5.5,
+    lineColor: '#808080',
+    nodeBaseSize: 4,
     nodeScaleK: 1.0,
     nodeColor: '#F3F3F4',
     mergeTolerance: 1,
@@ -22,16 +22,16 @@ const config = {
     bgColor: '#010204',
     animationEnabled: true,
     animationDuration: 9,
-    waveWidth: 0.9,
+    waveWidth: 0.65,
     fadeSpeed: 5,
     wavePattern: 'sequence',
-    inactiveNodeColor: '#454545',
-    activeNodeColor: '#AFF3F8',
+    inactiveNodeColor: '#3D3D3D',
+    activeNodeColor: '#FFFFFF',
 };
 
 let lastSvg = '';
 let lastStats = { nodes: 0, edges: 0, intersections: 0 };
-let activePresetIndex = 0;
+let activePresetIndex = 1;
 let animationFrameId = null;
 let animationStartTime = null;
 let animationPausedAt = 0;
@@ -537,13 +537,13 @@ function randomizeNodes() {
 
 function resetGenerator() {
     document.getElementById('columnSpacing').value = '1';
-    document.getElementById('rowSpacing').value = '0.5';
-    document.getElementById('nodeBaseSize').value = '5.5';
+    document.getElementById('rowSpacing').value = '1';
+    document.getElementById('nodeBaseSize').value = '4';
     document.getElementById('columnSpacingValue').textContent = '100%';
-    document.getElementById('rowSpacingValue').textContent = '50%';
-    document.getElementById('nodeBaseSizeValue').textContent = '5.5';
+    document.getElementById('rowSpacingValue').textContent = '100%';
+    document.getElementById('nodeBaseSizeValue').textContent = '4';
     document.querySelectorAll('.slider').forEach(updateSliderProgress);
-    applyPreset(0);
+    applyPreset(1);
 }
 
 /**
@@ -613,7 +613,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const presetsGrid = document.getElementById('presetsGrid');
     presets.forEach((preset, index) => {
         const btn = document.createElement('button');
-        btn.className = 'preset-btn' + (index === 0 ? ' active' : '');
+        btn.className = 'preset-btn' + (index === 1 ? ' active' : '');
         btn.innerHTML = generatePresetPreview(preset.nodes);
         btn.title = preset.name;
         btn.addEventListener('click', () => applyPreset(index));
@@ -736,7 +736,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Initialize with defaults.
     document.querySelectorAll('.slider, .motion-slider').forEach(updateSliderProgress);
-    applyPreset(0);
+    applyPreset(1);
     updatePlayPauseButton();
     if (animationFrameId === null) animationFrameId = requestAnimationFrame(animationLoop);
 });

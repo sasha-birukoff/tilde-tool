@@ -23,7 +23,7 @@
                 <div class="control-group">
                     <label class="control-label">Nodes per column</label>
                     <div class="nodes-input-row">
-                        <input type="text" id="nodesInput" class="nodes-text-input" value="1, 5, 3, 5, 1" placeholder="1, 5, 3, 5, 1" aria-label="Nodes per column">
+                        <input type="text" id="nodesInput" class="nodes-text-input" value="8, 3, 8" placeholder="8, 3, 8" aria-label="Nodes per column">
                         <button class="btn-icon" id="randomizeBtn" title="Randomize" aria-label="Randomize nodes per column">
                             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                                 <path d="M2 4h3.5l5 8H14M14 4h-3.5l-2 3.2M5.5 12H2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
@@ -51,16 +51,16 @@
                 <div class="control-group">
                     <div class="slider-row">
                         <label class="control-label" for="rowSpacing">Height</label>
-                    <input type="range" id="rowSpacing" class="slider" min="0.05" max="1.5" step="0.05" value="0.5">
-                        <span class="value-pill" id="rowSpacingValue">50%</span>
+                    <input type="range" id="rowSpacing" class="slider" min="0.05" max="1.5" step="0.05" value="1">
+                        <span class="value-pill" id="rowSpacingValue">100%</span>
                     </div>
                 </div>
 
                 <div class="control-group">
                     <div class="slider-row">
                         <label class="control-label" for="nodeBaseSize">Node size</label>
-                        <input type="range" id="nodeBaseSize" class="slider" min="0" max="20" step="0.5" value="5.5">
-                        <span class="value-pill" id="nodeBaseSizeValue">5.5</span>
+                        <input type="range" id="nodeBaseSize" class="slider" min="0" max="20" step="0.5" value="4">
+                        <span class="value-pill" id="nodeBaseSizeValue">4</span>
                     </div>
                 </div>
             </section>
@@ -83,8 +83,8 @@
                     </div>
                     <div class="motion-row">
                         <label for="waveWidth">Cluster</label>
-                        <input id="waveWidth" class="motion-slider" type="range" min="0.35" max="2" step="0.05" value="0.9">
-                        <output id="waveWidthValue">0.90</output>
+                        <input id="waveWidth" class="motion-slider" type="range" min="0.35" max="2" step="0.05" value="0.65">
+                        <output id="waveWidthValue">0.65</output>
                     </div>
                     <div class="motion-row">
                         <label for="fadeSpeed">Fade</label>
@@ -103,9 +103,9 @@
                     </label>
 
                     <div class="motion-colors">
-                        <label><span>Lines</span><input id="lineColor" type="color" value="#575757"></label>
-                        <label><span>Off</span><input id="inactiveNodeColor" type="color" value="#454545"></label>
-                        <label><span>On</span><input id="activeNodeColor" type="color" value="#AFF3F8"></label>
+                        <label><span>Lines</span><input id="lineColor" type="color" value="#808080"></label>
+                        <label><span>Off</span><input id="inactiveNodeColor" type="color" value="#3D3D3D"></label>
+                        <label><span>On</span><input id="activeNodeColor" type="color" value="#FFFFFF"></label>
                     </div>
                 </div>
             </section>
