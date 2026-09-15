@@ -14,7 +14,7 @@ const config = {
     rowSpacing: 1.0,
     lineThickness: 0.5,
     lineColor: '#AFAFAF',
-    nodeBaseSize: 4,
+    nodeBaseSize: 6,
     nodeScaleK: 1.0,
     nodeColor: '#F3F3F4',
     mergeTolerance: 1,
@@ -538,10 +538,10 @@ function randomizeNodes() {
 function resetGenerator() {
     document.getElementById('columnSpacing').value = '1';
     document.getElementById('rowSpacing').value = '1';
-    document.getElementById('nodeBaseSize').value = '4';
+    document.getElementById('nodeBaseSize').value = '6';
     document.getElementById('columnSpacingValue').textContent = '100%';
     document.getElementById('rowSpacingValue').textContent = '100%';
-    document.getElementById('nodeBaseSizeValue').textContent = '4';
+    document.getElementById('nodeBaseSizeValue').textContent = '6';
     document.querySelectorAll('.slider').forEach(updateSliderProgress);
     applyPreset(1);
 }
