@@ -21,8 +21,8 @@ const config = {
     showEdgeNodes: true,
     bgColor: '#010204',
     animationEnabled: true,
-    animationDuration: 9,
-    waveWidth: 0.65,
+    animationDuration: 6,
+    waveWidth: 0.4,
     fadeSpeed: 5,
     wavePattern: 'sequence',
     inactiveNodeColor: '#646464',
@@ -38,6 +38,7 @@ let animationPausedAt = 0;
 let animationPlaying = true;
 let exportInProgress = false;
 let cancelRequested = false;
+let ffmpegInstance = null;
 
 // Preset configurations
 const presets = [
@@ -582,12 +583,14 @@ function downloadBlob(blob, filename) {
 }
 
 function updateExportSummary() {
-    const format = document.querySelector('input[name="exportFormat"]:checked')?.value || 'webm';
+    const format = document.querySelector('input[name="exportFormat"]:checked')?.value || 'mp4';
     const summary = document.getElementById('exportSummary');
     if (format === 'svg') {
         summary.innerHTML = '<span>SVG</span><span>Static vector · transparent background</span>';
-    } else {
+    } else if (format === 'webm') {
         summary.innerHTML = `<span>WebM</span><span>1080 × 1080 · 30 fps · ${Number(config.animationDuration.toFixed(1))}s</span>`;
+    } else {
+        summary.innerHTML = `<span>MP4</span><span>2160 × 2160 · 30 fps · ${Number(config.animationDuration.toFixed(1))}s</span>`;
     }
 }
 
@@ -609,7 +612,7 @@ function drawExportFrame(context, canvas, progress) {
     if (!svg) return;
 
     const viewBox = svg.viewBox.baseVal;
-    const padding = 54;
+    const padding = canvas.width * 0.05;
     const scale = Math.min((canvas.width - padding * 2) / viewBox.width, (canvas.height - padding * 2) / viewBox.height);
     const offsetX = (canvas.width - viewBox.width * scale) / 2 - viewBox.x * scale;
     const offsetY = (canvas.height - viewBox.height * scale) / 2 - viewBox.y * scale;
@@ -639,17 +642,18 @@ function drawExportFrame(context, canvas, progress) {
     });
 }
 
-async function exportWebm() {
-    const mimeTypes = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'];
+async function captureVideo({ mimeTypes, size, bitrate }) {
+    if (!window.MediaRecorder || !HTMLCanvasElement.prototype.captureStream) {
+        throw new Error('Video recording is not supported in this browser.');
+    }
     const mimeType = mimeTypes.find(type => MediaRecorder.isTypeSupported(type));
-    if (!mimeType) throw new Error('WebM recording is not supported in this browser.');
-
+    if (!mimeType) throw new Error('This video format is not supported in this browser.');
     const canvas = document.createElement('canvas');
-    canvas.width = 1080;
-    canvas.height = 1080;
+    canvas.width = size;
+    canvas.height = size;
     const context = canvas.getContext('2d');
     const stream = canvas.captureStream(30);
-    const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 8_000_000 });
+    const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: bitrate });
     const chunks = [];
     const durationMs = config.animationDuration * 1000;
     const wasPlaying = animationPlaying;
@@ -686,18 +690,81 @@ async function exportWebm() {
     await stopped;
     stream.getTracks().forEach(track => track.stop());
 
-    if (!cancelRequested) {
-        downloadBlob(new Blob(chunks, { type: mimeType }), 'tilde-graph.webm');
-    }
-
     animationPlaying = wasPlaying;
     if (wasPlaying) restartAnimation();
     else applyAnimationFrame(animationPausedAt);
+    return cancelRequested ? null : new Blob(chunks, { type: mimeType });
+}
+
+async function exportWebm() {
+    const blob = await captureVideo({
+        mimeTypes: ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'],
+        size: 1080,
+        bitrate: 8_000_000,
+    });
+    if (blob) downloadBlob(blob, 'tilde-graph.webm');
+}
+
+async function getFfmpeg() {
+    if (ffmpegInstance) return ffmpegInstance;
+    if (!window.FFmpegWASM || !window.FFmpegUtil) throw new Error('The MP4 encoder could not be loaded.');
+
+    const button = document.getElementById('confirmExportBtn');
+    button.textContent = 'Loading encoder';
+    const ffmpeg = new FFmpegWASM.FFmpeg();
+    ffmpeg.on('progress', ({ progress }) => {
+        if (exportInProgress) button.textContent = `Encoding ${Math.max(0, Math.min(100, Math.round(progress * 100)))}%`;
+    });
+    const baseURL = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd';
+    await ffmpeg.load({
+        coreURL: await FFmpegUtil.toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
+        wasmURL: await FFmpegUtil.toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
+    });
+    ffmpegInstance = ffmpeg;
+    return ffmpeg;
+}
+
+async function exportMp4() {
+    const nativeMp4Types = ['video/mp4;codecs=avc1.42E01E', 'video/mp4'];
+    const canRecordMp4 = window.MediaRecorder && nativeMp4Types.some(type => MediaRecorder.isTypeSupported(type));
+    if (canRecordMp4) {
+        const blob = await captureVideo({ mimeTypes: nativeMp4Types, size: 2160, bitrate: 24_000_000 });
+        if (blob) downloadBlob(blob, 'tilde-graph-2160.mp4');
+        return;
+    }
+
+    const webm = await captureVideo({
+        mimeTypes: ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'],
+        size: 2160,
+        bitrate: 24_000_000,
+    });
+    if (!webm || cancelRequested) return;
+
+    const ffmpeg = await getFfmpeg();
+    const inputName = 'tilde-input.webm';
+    const outputName = 'tilde-output.mp4';
+    await ffmpeg.writeFile(inputName, new Uint8Array(await webm.arrayBuffer()));
+    await ffmpeg.exec([
+        '-i', inputName,
+        '-an',
+        '-c:v', 'libx264',
+        '-preset', 'veryfast',
+        '-crf', '18',
+        '-pix_fmt', 'yuv420p',
+        '-movflags', '+faststart',
+        outputName,
+    ]);
+    if (!cancelRequested) {
+        const data = await ffmpeg.readFile(outputName);
+        downloadBlob(new Blob([data.buffer], { type: 'video/mp4' }), 'tilde-graph-2160.mp4');
+    }
+    await ffmpeg.deleteFile(inputName);
+    await ffmpeg.deleteFile(outputName);
 }
 
 async function confirmExport() {
     if (exportInProgress) return;
-    const format = document.querySelector('input[name="exportFormat"]:checked')?.value || 'webm';
+    const format = document.querySelector('input[name="exportFormat"]:checked')?.value || 'mp4';
     if (format === 'svg') {
         downloadSvg();
         setExportView(false);
@@ -711,10 +778,11 @@ async function confirmExport() {
     button.disabled = true;
     cancelButton.textContent = 'Cancel export';
     try {
-        await exportWebm();
+        if (format === 'mp4') await exportMp4();
+        else await exportWebm();
         completed = !cancelRequested;
     } catch (error) {
-        button.textContent = 'Not supported';
+        button.textContent = 'Export failed';
         console.error(error);
         await new Promise(resolve => window.setTimeout(resolve, 1400));
     } finally {

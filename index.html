@@ -79,13 +79,13 @@
 
                     <div class="motion-row">
                         <label for="animationDuration">Duration</label>
-                        <input id="animationDuration" class="motion-slider" type="range" min="3" max="18" step="0.5" value="9">
-                        <output id="animationDurationValue">9s</output>
+                        <input id="animationDuration" class="motion-slider" type="range" min="3" max="18" step="0.5" value="6">
+                        <output id="animationDurationValue">6s</output>
                     </div>
                     <div class="motion-row">
                         <label for="waveWidth">Cluster</label>
-                        <input id="waveWidth" class="motion-slider" type="range" min="0.35" max="2" step="0.05" value="0.65">
-                        <output id="waveWidthValue">0.65</output>
+                        <input id="waveWidth" class="motion-slider" type="range" min="0.35" max="2" step="0.05" value="0.4">
+                        <output id="waveWidthValue">0.40</output>
                     </div>
                     <div class="motion-row">
                         <label for="fadeSpeed">Fade</label>
@@ -135,20 +135,20 @@
                       <span class="format-mark" aria-hidden="true"></span>
                   </label>
                   <label class="format-option">
-                      <input type="radio" name="exportFormat" value="webm" checked>
+                      <input type="radio" name="exportFormat" value="webm">
                       <span class="format-copy"><strong>WebM</strong><small>Animated · one seamless loop</small></span>
                       <span class="format-mark" aria-hidden="true"></span>
                   </label>
-                  <label class="format-option is-disabled">
-                      <input type="radio" name="exportFormat" value="mp4" disabled>
-                      <span class="format-copy"><strong>MP4</strong><small>Coming soon</small></span>
-                      <span class="format-badge">Soon</span>
+                  <label class="format-option">
+                      <input type="radio" name="exportFormat" value="mp4" checked>
+                      <span class="format-copy"><strong>MP4</strong><small>2160 × 2160 · best for social</small></span>
+                      <span class="format-badge">Recommended</span>
                   </label>
               </fieldset>
 
               <div class="export-summary" id="exportSummary">
-                  <span>WebM</span>
-                  <span>1080 × 1080 · 30 fps · 9s</span>
+                  <span>MP4</span>
+                  <span>2160 × 2160 · 30 fps · 6s</span>
               </div>
 
               <div class="export-actions">
@@ -166,6 +166,8 @@
         </main>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/umd/index.js"></script>
     <script src="graph.js"></script>
 </body>
 </html>
