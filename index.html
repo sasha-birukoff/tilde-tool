@@ -103,11 +103,13 @@
                         </select>
                     </label>
 
-                    <div class="motion-colors">
-                        <label><span>Lines</span><input id="lineColor" type="color" value="#AFAFAF"></label>
-                        <label><span>Off</span><input id="inactiveNodeColor" type="color" value="#646464"></label>
-                        <label><span>On</span><input id="activeNodeColor" type="color" value="#FFFFFF"></label>
-                    </div>
+                    <button class="colors-entry" id="openColorsBtn" type="button">
+                        <span>Colors</span>
+                        <span class="colors-entry-preview" aria-hidden="true">
+                            <i style="--swatch:#AFAFAF"></i><i style="--swatch:#646464"></i><i style="--swatch:#FFFFFF"></i>
+                        </span>
+                        <span class="colors-entry-arrow" aria-hidden="true">›</span>
+                    </button>
                 </div>
             </section>
 
@@ -117,6 +119,60 @@
                 <button class="btn-export" id="downloadBtn">Export</button>
             </div>
           </div>
+
+          <section class="panel-view color-view" id="colorView" aria-labelledby="colorTitle" hidden>
+              <header class="export-header">
+                  <div>
+                      <p class="export-eyebrow">Appearance</p>
+                      <h2 id="colorTitle">Colors</h2>
+                  </div>
+                  <button class="export-close" id="closeColorsBtn" type="button" aria-label="Close color settings">×</button>
+              </header>
+
+              <fieldset class="color-mode">
+                  <legend>Node color</legend>
+                  <div class="segmented-control">
+                      <label><input type="radio" name="nodeColorMode" value="uniform" checked><span>Uniform</span></label>
+                      <label><input type="radio" name="nodeColorMode" value="connections"><span>Connections</span></label>
+                  </div>
+              </fieldset>
+
+              <div class="color-fields">
+                  <label class="color-field">
+                      <span><strong>Lines</strong><small>Graph structure</small></span>
+                      <input id="lineColor" type="color" value="#AFAFAF">
+                  </label>
+
+                  <div class="uniform-color-fields" id="uniformColorFields">
+                      <label class="color-field">
+                          <span><strong>Off nodes</strong><small>Resting color</small></span>
+                          <input id="inactiveNodeColor" type="color" value="#646464">
+                      </label>
+                  </div>
+
+                  <div class="connection-color-fields" id="connectionColorFields" hidden>
+                      <div class="connection-gradient" id="connectionGradient" aria-hidden="true"></div>
+                      <div class="gradient-labels"><span>Fewer</span><span>More</span></div>
+                      <label class="color-field">
+                          <span><strong>Fewer</strong><small>Low connection count</small></span>
+                          <input id="connectionLowColor" type="color" value="#30394A">
+                      </label>
+                      <label class="color-field">
+                          <span><strong>More</strong><small>High connection count</small></span>
+                          <input id="connectionHighColor" type="color" value="#AFF3F8">
+                      </label>
+                  </div>
+
+                  <label class="color-field">
+                      <span><strong>On nodes</strong><small>Wave highlight</small></span>
+                      <input id="activeNodeColor" type="color" value="#FFFFFF">
+                  </label>
+              </div>
+
+              <div class="color-actions">
+                  <button class="btn-export" id="doneColorsBtn" type="button">Done</button>
+              </div>
+          </section>
 
           <section class="panel-view export-view" id="exportView" aria-labelledby="exportTitle" hidden>
               <header class="export-header">

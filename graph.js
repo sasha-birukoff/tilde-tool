@@ -25,7 +25,10 @@ const config = {
     waveWidth: 0.4,
     fadeSpeed: 5,
     wavePattern: 'sequence',
+    nodeColorMode: 'uniform',
     inactiveNodeColor: '#646464',
+    connectionLowColor: '#30394A',
+    connectionHighColor: '#AFF3F8',
     activeNodeColor: '#FFFFFF',
 };
 
@@ -223,6 +226,8 @@ function computeIntersections(nodes, edges, cfg) {
                 );
                 if (dist < cfg.mergeTolerance) {
                     existing.count++;
+                    existing.edgeIds.add(i);
+                    existing.edgeIds.add(j);
                     merged = true;
                     break;
                 }
@@ -233,6 +238,7 @@ function computeIntersections(nodes, edges, cfg) {
                     x: intersection.x,
                     y: intersection.y,
                     count: 1,
+                    edgeIds: new Set([i, j]),
                 });
             }
         }
@@ -258,7 +264,7 @@ function buildSvg(nodes, edges, intersections, cfg) {
         const size = cfg.nodeBaseSize + cfg.nodeScaleK * inter.count;
         if (size > 0) {
             const half = size / 2;
-            svgContent += `<rect class="graph-node" data-node-x="${inter.x}" data-node-y="${inter.y}" x="${inter.x - half}" y="${inter.y - half}" ` +
+            svgContent += `<rect class="graph-node" data-node-x="${inter.x}" data-node-y="${inter.y}" data-node-degree="${inter.edgeIds.size * 2}" x="${inter.x - half}" y="${inter.y - half}" ` +
                 `width="${size}" height="${size}" fill="${cfg.nodeColor}" />`;
         }
     }
@@ -275,7 +281,7 @@ function buildSvg(nodes, edges, intersections, cfg) {
         const size = cfg.nodeBaseSize + cfg.nodeScaleK * node.degree;
         if (size > 0) {
             const half = size / 2;
-            svgContent += `<rect class="graph-node" data-node-x="${node.x}" data-node-y="${node.y}" x="${node.x - half}" y="${node.y - half}" ` +
+            svgContent += `<rect class="graph-node" data-node-x="${node.x}" data-node-y="${node.y}" data-node-degree="${node.degree}" x="${node.x - half}" y="${node.y - half}" ` +
                 `width="${size}" height="${size}" fill="${cfg.nodeColor}" />`;
         }
     }
@@ -459,14 +465,26 @@ function mixColors(fromHex, toHex, amount) {
     return `rgb(${channel('r')}, ${channel('g')}, ${channel('b')})`;
 }
 
+function getNodeBaseColor(node, minDegree, maxDegree) {
+    if (config.nodeColorMode !== 'connections') return config.inactiveNodeColor;
+    const degree = Number(node.dataset.nodeDegree);
+    const amount = maxDegree === minDegree ? 0.5 : clamp01((degree - minDegree) / (maxDegree - minDegree));
+    return mixColors(config.connectionLowColor, config.connectionHighColor, amount);
+}
+
 function applyAnimationFrame(progress) {
     const preview = document.getElementById('preview');
     if (!preview) return;
 
     preview.querySelectorAll('.graph-line').forEach(line => line.setAttribute('stroke', config.lineColor));
-    preview.querySelectorAll('.graph-node').forEach(node => {
+    const graphNodes = [...preview.querySelectorAll('.graph-node')];
+    const degrees = graphNodes.map(node => Number(node.dataset.nodeDegree));
+    const minDegree = Math.min(...degrees);
+    const maxDegree = Math.max(...degrees);
+    graphNodes.forEach(node => {
+        const baseColor = getNodeBaseColor(node, minDegree, maxDegree);
         if (!config.animationEnabled) {
-            node.setAttribute('fill', config.nodeColor);
+            node.setAttribute('fill', baseColor);
             return;
         }
         const x = Number(node.dataset.nodeX);
@@ -474,8 +492,24 @@ function applyAnimationFrame(progress) {
         const halfSpan = Math.max((config.svgWidth - config.marginLeft - config.marginRight) / 2, (config.svgHeight - config.marginTop - config.marginBottom) / 2);
         const nx = (x - config.svgWidth / 2) / halfSpan;
         const ny = (y - config.svgHeight / 2) / halfSpan;
-        node.setAttribute('fill', mixColors(config.inactiveNodeColor, config.activeNodeColor, waveEnergy(nx, ny, progress)));
+        node.setAttribute('fill', mixColors(baseColor, config.activeNodeColor, waveEnergy(nx, ny, progress)));
     });
+}
+
+function updateColorPreview() {
+    const swatches = document.querySelectorAll('.colors-entry-preview i');
+    const middleColor = config.nodeColorMode === 'connections' ? config.connectionLowColor : config.inactiveNodeColor;
+    const endColor = config.nodeColorMode === 'connections' ? config.connectionHighColor : config.activeNodeColor;
+    [config.lineColor, middleColor, endColor].forEach((color, index) => swatches[index]?.style.setProperty('--swatch', color));
+    document.getElementById('connectionGradient').style.background = `linear-gradient(90deg,${config.connectionLowColor},${config.connectionHighColor})`;
+}
+
+function setNodeColorMode(mode) {
+    config.nodeColorMode = mode;
+    document.getElementById('uniformColorFields').hidden = mode !== 'uniform';
+    document.getElementById('connectionColorFields').hidden = mode !== 'connections';
+    updateColorPreview();
+    applyAnimationFrame(animationPausedAt);
 }
 
 function getAnimationProgress(timestamp = performance.now()) {
@@ -556,11 +590,12 @@ function resetGenerator() {
  * Download SVG as file
  */
 function downloadSvg() {
-    if (!lastSvg) {
+    const currentSvg = document.querySelector('#preview svg')?.outerHTML;
+    if (!currentSvg) {
         return;
     }
 
-    const blob = new Blob([lastSvg], { type: 'image/svg+xml' });
+    const blob = new Blob([currentSvg], { type: 'image/svg+xml' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
@@ -594,16 +629,27 @@ function updateExportSummary() {
     }
 }
 
+function setPanelView(viewId) {
+    if (exportInProgress && viewId !== 'exportView') return;
+    ['editorView', 'colorView', 'exportView'].forEach(id => {
+        document.getElementById(id).hidden = id !== viewId;
+    });
+}
+
 function setExportView(isOpen) {
-    if (exportInProgress && !isOpen) return;
-    document.getElementById('editorView').hidden = isOpen;
-    document.getElementById('exportView').hidden = !isOpen;
+    setPanelView(isOpen ? 'exportView' : 'editorView');
     if (isOpen) {
         updateExportSummary();
         document.getElementById('closeExportBtn').focus();
     } else {
         document.getElementById('downloadBtn').focus();
     }
+}
+
+function setColorView(isOpen) {
+    setPanelView(isOpen ? 'colorView' : 'editorView');
+    if (isOpen) document.getElementById('closeColorsBtn').focus();
+    else document.getElementById('openColorsBtn').focus();
 }
 
 function drawExportFrame(context, canvas, progress) {
@@ -799,7 +845,8 @@ async function confirmExport() {
  * Copy SVG markup to the clipboard
  */
 async function copySvg() {
-    if (!lastSvg) {
+    const currentSvg = document.querySelector('#preview svg')?.outerHTML;
+    if (!currentSvg) {
         return;
     }
 
@@ -808,10 +855,10 @@ async function copySvg() {
 
     try {
         if (navigator.clipboard && window.isSecureContext) {
-            await navigator.clipboard.writeText(lastSvg);
+            await navigator.clipboard.writeText(currentSvg);
         } else {
             const textarea = document.createElement('textarea');
-            textarea.value = lastSvg;
+            textarea.value = currentSvg;
             textarea.setAttribute('readonly', '');
             textarea.style.position = 'fixed';
             textarea.style.opacity = '0';
@@ -877,6 +924,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Button event listeners
     document.getElementById('copyBtn').addEventListener('click', copySvg);
+    document.getElementById('openColorsBtn').addEventListener('click', () => setColorView(true));
+    document.getElementById('closeColorsBtn').addEventListener('click', () => setColorView(false));
+    document.getElementById('doneColorsBtn').addEventListener('click', () => setColorView(false));
     document.getElementById('downloadBtn').addEventListener('click', () => setExportView(true));
     document.getElementById('closeExportBtn').addEventListener('click', () => setExportView(false));
     document.getElementById('cancelExportBtn').addEventListener('click', () => {
@@ -889,6 +939,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     document.addEventListener('keydown', event => {
         if (event.key === 'Escape' && !document.getElementById('exportView').hidden) setExportView(false);
+        else if (event.key === 'Escape' && !document.getElementById('colorView').hidden) setColorView(false);
     });
 
     document.getElementById('animationEnabled').addEventListener('change', event => {
@@ -933,17 +984,36 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('lineColor').addEventListener('input', event => {
         config.lineColor = event.target.value.toUpperCase();
+        updateColorPreview();
         render();
     });
 
     document.getElementById('inactiveNodeColor').addEventListener('input', event => {
         config.inactiveNodeColor = event.target.value;
+        updateColorPreview();
         applyAnimationFrame(animationPausedAt);
     });
 
     document.getElementById('activeNodeColor').addEventListener('input', event => {
         config.activeNodeColor = event.target.value;
+        updateColorPreview();
         applyAnimationFrame(animationPausedAt);
+    });
+
+    document.getElementById('connectionLowColor').addEventListener('input', event => {
+        config.connectionLowColor = event.target.value;
+        updateColorPreview();
+        applyAnimationFrame(animationPausedAt);
+    });
+
+    document.getElementById('connectionHighColor').addEventListener('input', event => {
+        config.connectionHighColor = event.target.value;
+        updateColorPreview();
+        applyAnimationFrame(animationPausedAt);
+    });
+
+    document.querySelectorAll('input[name="nodeColorMode"]').forEach(input => {
+        input.addEventListener('change', event => setNodeColorMode(event.target.value));
     });
 
     // Map of slider IDs to their value display IDs
@@ -975,6 +1045,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Initialize with defaults.
     document.querySelectorAll('.slider, .motion-slider').forEach(updateSliderProgress);
+    updateColorPreview();
     applyPreset(1);
     updatePlayPauseButton();
     if (animationFrameId === null) animationFrameId = requestAnimationFrame(animationLoop);
