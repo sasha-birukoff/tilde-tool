@@ -13,7 +13,7 @@ const config = {
     columnSpacing: 1.0,
     rowSpacing: 1.0,
     lineThickness: 0.5,
-    lineColor: '#808080',
+    lineColor: '#AFAFAF',
     nodeBaseSize: 4,
     nodeScaleK: 1.0,
     nodeColor: '#F3F3F4',
@@ -25,7 +25,7 @@ const config = {
     waveWidth: 0.65,
     fadeSpeed: 5,
     wavePattern: 'sequence',
-    inactiveNodeColor: '#3D3D3D',
+    inactiveNodeColor: '#646464',
     activeNodeColor: '#FFFFFF',
 };
 
