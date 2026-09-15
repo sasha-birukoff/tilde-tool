@@ -4,7 +4,7 @@
 :root {
     --bg: #010204; --panel: #101011; --border: #353538; --border-strong: #555559;
     --text: #f2f1ef; --muted: #aaa6a4; --blue-1: #4d819b; --blue-2: #bfe8fe;
-    --panel-width: 270px; --panel-gap: 30px; --panel-margin: 32px;
+    --panel-width: 270px; --panel-gap: 15px; --panel-margin: 32px;
     --mono: "Flexa Mono", "SFMono-Regular", Consolas, monospace;
     --sans: "Another Sans", Inter, system-ui, sans-serif;
 }
@@ -28,7 +28,7 @@ button { -webkit-tap-highlight-color: transparent; }
     font-family: var(--mono); font-size: 10px; line-height: 1; font-weight: 400;
     letter-spacing: 1.2px; text-transform: uppercase; color: var(--muted);
 }
-.section-title { margin-bottom: 14px; }
+.section-title { margin-bottom: 7px; }
 .presets-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; }
 .preset-btn {
     aspect-ratio: 1; padding: 4px; display: grid; place-items: center; overflow: hidden;
@@ -39,8 +39,8 @@ button { -webkit-tap-highlight-color: transparent; }
 .preset-btn.active { border-color: #5b99b6; background: rgba(77,129,155,.18); box-shadow: 0 5px 18px rgba(94,171,201,.1); }
 .preset-btn svg { display: block; width: 100%; height: 100%; }
 
-.controls-section { gap: 17px; }
-.control-group { display: flex; flex-direction: column; gap: 14px; }
+.controls-section { gap: 8px; }
+.control-group { display: flex; flex-direction: column; gap: 7px; }
 .nodes-input-row { display: grid; grid-template-columns: minmax(0, 1fr) 38px 38px; gap: 8px; }
 .nodes-text-input, .btn-icon, .value-pill {
     height: 30px; color: var(--text); background: transparent; border: 1px solid var(--border); border-radius: 8px;
@@ -98,13 +98,13 @@ button { -webkit-tap-highlight-color: transparent; }
         inset 0 4.4px 22px 7px #83abc0, inset 0 0 29px 20px #496f82, inset 0 .6px 38px 29px #101d23;
 }
 
-.motion-section { display: flex; flex-direction: column; gap: 16px; }
+.motion-section { display: flex; flex-direction: column; gap: 8px; }
 .motion-title {
     color: var(--muted);
     font-family: var(--mono); font-size: 10px; line-height: 1; font-weight: 400;
     letter-spacing: 1.2px; text-transform: uppercase;
 }
-.motion-controls { display: flex; flex-direction: column; gap: 14px; }
+.motion-controls { display: flex; flex-direction: column; gap: 7px; }
 .motion-topline { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .motion-check { display: flex; align-items: center; gap: 7px; color: var(--text); font-size: 11px; cursor: pointer; }
 .motion-check input { accent-color: var(--blue-2); }
@@ -119,8 +119,14 @@ button { -webkit-tap-highlight-color: transparent; }
     color: var(--muted); font-family: var(--mono); font-size: 9px; letter-spacing: .8px; text-transform: uppercase;
 }
 .motion-row input[type="range"] { width: 100%; height: 14px; appearance: none; background: transparent; cursor: pointer; }
-.motion-row input[type="range"]::-webkit-slider-runnable-track { height: 2px; border-radius: 99px; background: linear-gradient(90deg,var(--blue-1),var(--blue-2)); }
+.motion-row input[type="range"]::-webkit-slider-runnable-track {
+    height: 2px; border-radius: 99px;
+    background: linear-gradient(90deg, var(--blue-1) 0%, var(--blue-2) var(--progress,50%), rgba(77,129,155,.3) var(--progress,50%), rgba(191,232,254,.3) 100%);
+}
 .motion-row input[type="range"]::-webkit-slider-thumb { width: 8px; height: 8px; margin-top: -3px; appearance: none; border: 0; border-radius: 50%; background: var(--blue-2); }
+.motion-row input[type="range"]::-moz-range-track { height: 2px; border-radius: 99px; background: rgba(191,232,254,.3); }
+.motion-row input[type="range"]::-moz-range-progress { height: 2px; border-radius: 99px; background: linear-gradient(90deg,var(--blue-1),var(--blue-2)); }
+.motion-row input[type="range"]::-moz-range-thumb { width: 8px; height: 8px; border: 0; border-radius: 50%; background: var(--blue-2); }
 .motion-row output { color: var(--text); font-family: var(--mono); font-size: 9px; text-align: right; }
 .motion-field { display: grid; grid-template-columns: 48px 1fr; gap: 10px; align-items: center; }
 .motion-field select {
@@ -140,7 +146,7 @@ button { -webkit-tap-highlight-color: transparent; }
 .preview svg { display: block; width: auto; height: auto; max-width: 100%; max-height: 100%; }
 
 @media (max-width: 900px), (max-height: 620px) {
-    :root { --panel-width: 236px; --panel-gap: 20px; --panel-margin: 16px; }
+    :root { --panel-width: 236px; --panel-gap: 10px; --panel-margin: 16px; }
     .control-panel { padding: 16px; }
     .canvas-area { padding: 24px 24px 24px calc(var(--panel-width) + var(--panel-margin) * 2 + 24px); }
     .nodes-input-row { grid-template-columns: minmax(0,1fr) 34px 34px; gap: 7px; }

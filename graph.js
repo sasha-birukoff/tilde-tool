@@ -669,18 +669,21 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('animationDuration').addEventListener('input', event => {
         config.animationDuration = Number(event.target.value);
         document.getElementById('animationDurationValue').textContent = `${Number(config.animationDuration.toFixed(1))}s`;
+        updateSliderProgress(event.target);
         restartAnimation();
     });
 
     document.getElementById('waveWidth').addEventListener('input', event => {
         config.waveWidth = Number(event.target.value);
         document.getElementById('waveWidthValue').textContent = config.waveWidth.toFixed(2);
+        updateSliderProgress(event.target);
         applyAnimationFrame(animationPausedAt);
     });
 
     document.getElementById('fadeSpeed').addEventListener('input', event => {
         config.fadeSpeed = Number(event.target.value);
         document.getElementById('fadeSpeedValue').textContent = `${Number(config.fadeSpeed.toFixed(1))}×`;
+        updateSliderProgress(event.target);
         applyAnimationFrame(animationPausedAt);
     });
 
@@ -732,7 +735,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Initialize with defaults.
-    document.querySelectorAll('.slider').forEach(updateSliderProgress);
+    document.querySelectorAll('.slider, .motion-slider').forEach(updateSliderProgress);
     applyPreset(0);
     updatePlayPauseButton();
     if (animationFrameId === null) animationFrameId = requestAnimationFrame(animationLoop);
