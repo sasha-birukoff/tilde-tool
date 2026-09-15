@@ -449,8 +449,12 @@ function waveEnergy(nx, ny, progress) {
     return clamp01(Math.max(radial, forward, backward, echo));
 }
 
-function hexToRgb(hex) {
-    const normalized = hex.replace('#', '');
+function colorToRgb(color) {
+    const rgbMatch = color.match(/^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i);
+    if (rgbMatch) {
+        return { r: Number(rgbMatch[1]), g: Number(rgbMatch[2]), b: Number(rgbMatch[3]) };
+    }
+    const normalized = color.replace('#', '');
     return {
         r: parseInt(normalized.slice(0, 2), 16),
         g: parseInt(normalized.slice(2, 4), 16),
@@ -459,8 +463,8 @@ function hexToRgb(hex) {
 }
 
 function mixColors(fromHex, toHex, amount) {
-    const from = hexToRgb(fromHex);
-    const to = hexToRgb(toHex);
+    const from = colorToRgb(fromHex);
+    const to = colorToRgb(toHex);
     const channel = key => Math.round(from[key] + (to[key] - from[key]) * amount);
     return `rgb(${channel('r')}, ${channel('g')}, ${channel('b')})`;
 }
