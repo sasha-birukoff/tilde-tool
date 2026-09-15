@@ -51,6 +51,17 @@ const presets = [
     { name: 'Burst', nodes: '1,8,1', columnSpacing: 1.0, rowSpacing: 1.0 },
 ];
 
+const vibrantDegreePalette = [
+    { max: 4, color: '#FF1111' },
+    { max: 6, color: '#FF7417' },
+    { max: 8, color: '#FFD31A' },
+    { max: 9, color: '#58F20B' },
+    { max: 10, color: '#149797' },
+    { max: 12, color: '#3120DF' },
+    { max: 14, color: '#9A3FD1' },
+    { max: Infinity, color: '#E65FBD' },
+];
+
 // ============================================================================
 // Core Functions
 // ============================================================================
@@ -470,8 +481,11 @@ function mixColors(fromHex, toHex, amount) {
 }
 
 function getNodeBaseColor(node, minDegree, maxDegree) {
-    if (config.nodeColorMode !== 'connections') return config.inactiveNodeColor;
     const degree = Number(node.dataset.nodeDegree);
+    if (config.nodeColorMode === 'vibrant') {
+        return vibrantDegreePalette.find(entry => degree <= entry.max).color;
+    }
+    if (config.nodeColorMode !== 'connections') return config.inactiveNodeColor;
     const amount = maxDegree === minDegree ? 0.5 : clamp01((degree - minDegree) / (maxDegree - minDegree));
     return mixColors(config.connectionLowColor, config.connectionHighColor, amount);
 }
@@ -502,8 +516,12 @@ function applyAnimationFrame(progress) {
 
 function updateColorPreview() {
     const swatches = document.querySelectorAll('.colors-entry-preview i');
-    const middleColor = config.nodeColorMode === 'connections' ? config.connectionLowColor : config.inactiveNodeColor;
-    const endColor = config.nodeColorMode === 'connections' ? config.connectionHighColor : config.activeNodeColor;
+    const middleColor = config.nodeColorMode === 'vibrant'
+        ? vibrantDegreePalette[0].color
+        : config.nodeColorMode === 'connections' ? config.connectionLowColor : config.inactiveNodeColor;
+    const endColor = config.nodeColorMode === 'vibrant'
+        ? vibrantDegreePalette.at(-1).color
+        : config.nodeColorMode === 'connections' ? config.connectionHighColor : config.activeNodeColor;
     [config.lineColor, middleColor, endColor].forEach((color, index) => swatches[index]?.style.setProperty('--swatch', color));
     document.getElementById('connectionGradient').style.background = `linear-gradient(90deg,${config.connectionLowColor},${config.connectionHighColor})`;
 }
@@ -512,6 +530,7 @@ function setNodeColorMode(mode) {
     config.nodeColorMode = mode;
     document.getElementById('uniformColorFields').hidden = mode !== 'uniform';
     document.getElementById('connectionColorFields').hidden = mode !== 'connections';
+    document.getElementById('vibrantColorFields').hidden = mode !== 'vibrant';
     updateColorPreview();
     applyAnimationFrame(animationPausedAt);
 }
