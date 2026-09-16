@@ -30,8 +30,7 @@ const config = {
     connectionLowColor: '#30394A',
     connectionHighColor: '#AFF3F8',
     activeNodeColor: '#FFFFFF',
-    nodeStrokeColor: '#FFFFFF',
-    nodeStrokeWidth: 1,
+    nodeStrokeWidth: 0.75,
     nodeStrokeOpacity: 0.85,
 };
 
@@ -279,7 +278,7 @@ function buildSvg(nodes, edges, intersections, cfg) {
         if (size > 0) {
             const half = size / 2;
             svgContent += `<rect class="graph-node" data-node-x="${inter.x}" data-node-y="${inter.y}" data-node-degree="${inter.edgeIds.size * 2}" x="${inter.x - half}" y="${inter.y - half}" ` +
-                `width="${size}" height="${size}" fill="${cfg.nodeColor}" stroke="${cfg.nodeStrokeColor}" stroke-width="${cfg.nodeStrokeWidth}" stroke-opacity="${cfg.nodeStrokeOpacity}" />`;
+                `width="${size}" height="${size}" fill="${cfg.nodeColor}" stroke="${cfg.lineColor}" stroke-width="${cfg.nodeStrokeWidth}" stroke-opacity="${cfg.nodeStrokeOpacity}" />`;
         }
     }
 
@@ -296,7 +295,7 @@ function buildSvg(nodes, edges, intersections, cfg) {
         if (size > 0) {
             const half = size / 2;
             svgContent += `<rect class="graph-node" data-node-x="${node.x}" data-node-y="${node.y}" data-node-degree="${node.degree}" x="${node.x - half}" y="${node.y - half}" ` +
-                `width="${size}" height="${size}" fill="${cfg.nodeColor}" stroke="${cfg.nodeStrokeColor}" stroke-width="${cfg.nodeStrokeWidth}" stroke-opacity="${cfg.nodeStrokeOpacity}" />`;
+                `width="${size}" height="${size}" fill="${cfg.nodeColor}" stroke="${cfg.lineColor}" stroke-width="${cfg.nodeStrokeWidth}" stroke-opacity="${cfg.nodeStrokeOpacity}" />`;
         }
     }
 
