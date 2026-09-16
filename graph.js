@@ -448,8 +448,8 @@ function windowedWave(coordinate, progress, start, end, from, to, width) {
     return gaussian(coordinate - center, width * config.waveWidth) * fadeIn * fadeOut;
 }
 
-function waveEnergy(nx, ny, progress) {
-    const radial = windowedWave(Math.hypot(nx, ny), progress, 0.08, 0.27, -0.08, 1.30, 0.16);
+function waveEnergy(nx, ny, progress, radialNx = nx, radialNy = ny) {
+    const radial = windowedWave(Math.hypot(radialNx, radialNy), progress, 0.08, 0.27, -0.08, 1.30, 0.16);
     const forward = windowedWave(nx * 0.72 - ny * 0.70, progress, 0.36, 0.59, -1.18, 1.18, 0.18);
     const backward = windowedWave(nx * 0.72 + ny * 0.70, progress, 0.69, 0.94, 1.22, -1.22, 0.17);
     const echo = windowedWave(nx * 0.45 - ny * 0.30, progress, 0.70, 0.98, -0.95, 0.95, 0.28) * 0.22;
@@ -504,6 +504,17 @@ function applyAnimationFrame(progress) {
     const minDegree = Math.min(...degrees);
     const maxDegree = Math.max(...degrees);
     const degreeLevels = [...new Set(degrees)].sort((a, b) => a - b);
+    const positions = graphNodes.map(node => ({
+        x: Number(node.dataset.nodeX),
+        y: Number(node.dataset.nodeY),
+    }));
+    const minX = Math.min(...positions.map(position => position.x));
+    const maxX = Math.max(...positions.map(position => position.x));
+    const minY = Math.min(...positions.map(position => position.y));
+    const maxY = Math.max(...positions.map(position => position.y));
+    const graphCenterX = (minX + maxX) / 2;
+    const graphCenterY = (minY + maxY) / 2;
+    const graphHalfSpan = Math.max((maxX - minX) / 2, (maxY - minY) / 2, 1);
     graphNodes.forEach(node => {
         const baseColor = getNodeBaseColor(node, minDegree, maxDegree, degreeLevels);
         if (!config.animationEnabled) {
@@ -515,7 +526,9 @@ function applyAnimationFrame(progress) {
         const halfSpan = Math.max((config.svgWidth - config.marginLeft - config.marginRight) / 2, (config.svgHeight - config.marginTop - config.marginBottom) / 2);
         const nx = (x - config.svgWidth / 2) / halfSpan;
         const ny = (y - config.svgHeight / 2) / halfSpan;
-        node.setAttribute('fill', mixColors(baseColor, config.activeNodeColor, waveEnergy(nx, ny, progress)));
+        const radialNx = (x - graphCenterX) / graphHalfSpan;
+        const radialNy = (y - graphCenterY) / graphHalfSpan;
+        node.setAttribute('fill', mixColors(baseColor, config.activeNodeColor, waveEnergy(nx, ny, progress, radialNx, radialNy)));
     });
 }
 
