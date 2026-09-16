@@ -12,8 +12,8 @@ const config = {
     marginBottom: 100,
     columnSpacing: 1.5,
     rowSpacing: 0.8,
-    lineThickness: 0.5,
-    lineColor: '#AFAFAF',
+    lineThickness: 1,
+    lineColor: '#FFFFFF',
     nodeBaseSize: 9,
     nodeScaleK: 0.5,
     nodeColor: '#F3F3F4',
@@ -30,6 +30,9 @@ const config = {
     connectionLowColor: '#30394A',
     connectionHighColor: '#AFF3F8',
     activeNodeColor: '#FFFFFF',
+    nodeStrokeColor: '#FFFFFF',
+    nodeStrokeWidth: 1,
+    nodeStrokeOpacity: 0.85,
 };
 
 let lastSvg = '';
@@ -56,10 +59,10 @@ const vibrantDegreePalette = [
     { max: 6, color: '#FF7417' },
     { max: 8, color: '#FFD31A' },
     { max: 9, color: '#58F20B' },
-    { max: 10, color: '#149797' },
-    { max: 12, color: '#3120DF' },
-    { max: 14, color: '#9A3FD1' },
-    { max: Infinity, color: '#E65FBD' },
+    { max: 10, color: '#12D8C7' },
+    { max: 12, color: '#5367FF' },
+    { max: 14, color: '#B64DFF' },
+    { max: Infinity, color: '#FF5FC8' },
 ];
 
 // ============================================================================
@@ -276,7 +279,7 @@ function buildSvg(nodes, edges, intersections, cfg) {
         if (size > 0) {
             const half = size / 2;
             svgContent += `<rect class="graph-node" data-node-x="${inter.x}" data-node-y="${inter.y}" data-node-degree="${inter.edgeIds.size * 2}" x="${inter.x - half}" y="${inter.y - half}" ` +
-                `width="${size}" height="${size}" fill="${cfg.nodeColor}" />`;
+                `width="${size}" height="${size}" fill="${cfg.nodeColor}" stroke="${cfg.nodeStrokeColor}" stroke-width="${cfg.nodeStrokeWidth}" stroke-opacity="${cfg.nodeStrokeOpacity}" />`;
         }
     }
 
@@ -293,7 +296,7 @@ function buildSvg(nodes, edges, intersections, cfg) {
         if (size > 0) {
             const half = size / 2;
             svgContent += `<rect class="graph-node" data-node-x="${node.x}" data-node-y="${node.y}" data-node-degree="${node.degree}" x="${node.x - half}" y="${node.y - half}" ` +
-                `width="${size}" height="${size}" fill="${cfg.nodeColor}" />`;
+                `width="${size}" height="${size}" fill="${cfg.nodeColor}" stroke="${cfg.nodeStrokeColor}" stroke-width="${cfg.nodeStrokeWidth}" stroke-opacity="${cfg.nodeStrokeOpacity}" />`;
         }
     }
 
@@ -726,6 +729,16 @@ function drawExportFrame(context, canvas, progress) {
             Number(node.getAttribute('width')),
             Number(node.getAttribute('height'))
         );
+        context.globalAlpha = Number(node.getAttribute('stroke-opacity')) || 1;
+        context.strokeStyle = node.getAttribute('stroke') || '#FFFFFF';
+        context.lineWidth = Number(node.getAttribute('stroke-width')) || 0;
+        context.strokeRect(
+            Number(node.getAttribute('x')),
+            Number(node.getAttribute('y')),
+            Number(node.getAttribute('width')),
+            Number(node.getAttribute('height'))
+        );
+        context.globalAlpha = 1;
     });
 }
 
