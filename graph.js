@@ -686,7 +686,7 @@ function drawExportFrame(context, canvas, progress) {
     if (!svg) return;
 
     const viewBox = svg.viewBox.baseVal;
-    const padding = canvas.width * 0.05;
+    const padding = canvas.width * 0.08;
     const scale = Math.min((canvas.width - padding * 2) / viewBox.width, (canvas.height - padding * 2) / viewBox.height);
     const offsetX = (canvas.width - viewBox.width * scale) / 2 - viewBox.x * scale;
     const offsetY = (canvas.height - viewBox.height * scale) / 2 - viewBox.y * scale;
