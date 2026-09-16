@@ -10,8 +10,8 @@ const config = {
     marginRight: 100,
     marginTop: 100,
     marginBottom: 100,
-    columnSpacing: 1.0,
-    rowSpacing: 1.0,
+    columnSpacing: 1.5,
+    rowSpacing: 0.8,
     lineThickness: 0.5,
     lineColor: '#AFAFAF',
     nodeBaseSize: 9,
@@ -19,7 +19,7 @@ const config = {
     nodeColor: '#F3F3F4',
     mergeTolerance: 1,
     showEdgeNodes: true,
-    bgColor: '#010204',
+    bgColor: '#060709',
     animationEnabled: true,
     animationDuration: 6,
     waveWidth: 0.4,
@@ -601,11 +601,11 @@ function randomizeNodes() {
 }
 
 function resetGenerator() {
-    document.getElementById('columnSpacing').value = '1';
-    document.getElementById('rowSpacing').value = '1';
+    document.getElementById('columnSpacing').value = '1.5';
+    document.getElementById('rowSpacing').value = '0.8';
     document.getElementById('nodeBaseSize').value = '9';
-    document.getElementById('columnSpacingValue').textContent = '100%';
-    document.getElementById('rowSpacingValue').textContent = '100%';
+    document.getElementById('columnSpacingValue').textContent = '150%';
+    document.getElementById('rowSpacingValue').textContent = '80%';
     document.getElementById('nodeBaseSizeValue').textContent = '9';
     document.querySelectorAll('.slider').forEach(updateSliderProgress);
     applyPreset(1);
