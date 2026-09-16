@@ -25,7 +25,7 @@ const config = {
     waveWidth: 0.4,
     fadeSpeed: 5,
     wavePattern: 'sequence',
-    nodeColorMode: 'uniform',
+    nodeColorMode: 'vibrant',
     inactiveNodeColor: '#646464',
     connectionLowColor: '#30394A',
     connectionHighColor: '#AFF3F8',
@@ -480,10 +480,14 @@ function mixColors(fromHex, toHex, amount) {
     return `rgb(${channel('r')}, ${channel('g')}, ${channel('b')})`;
 }
 
-function getNodeBaseColor(node, minDegree, maxDegree) {
+function getNodeBaseColor(node, minDegree, maxDegree, degreeLevels) {
     const degree = Number(node.dataset.nodeDegree);
     if (config.nodeColorMode === 'vibrant') {
-        return vibrantDegreePalette.find(entry => degree <= entry.max).color;
+        const rank = degreeLevels.indexOf(degree);
+        const paletteIndex = degreeLevels.length <= 1
+            ? Math.floor((vibrantDegreePalette.length - 1) / 2)
+            : Math.round((rank / (degreeLevels.length - 1)) * (vibrantDegreePalette.length - 1));
+        return vibrantDegreePalette[paletteIndex].color;
     }
     if (config.nodeColorMode !== 'connections') return config.inactiveNodeColor;
     const amount = maxDegree === minDegree ? 0.5 : clamp01((degree - minDegree) / (maxDegree - minDegree));
@@ -499,8 +503,9 @@ function applyAnimationFrame(progress) {
     const degrees = graphNodes.map(node => Number(node.dataset.nodeDegree));
     const minDegree = Math.min(...degrees);
     const maxDegree = Math.max(...degrees);
+    const degreeLevels = [...new Set(degrees)].sort((a, b) => a - b);
     graphNodes.forEach(node => {
-        const baseColor = getNodeBaseColor(node, minDegree, maxDegree);
+        const baseColor = getNodeBaseColor(node, minDegree, maxDegree, degreeLevels);
         if (!config.animationEnabled) {
             node.setAttribute('fill', baseColor);
             return;
