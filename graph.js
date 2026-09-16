@@ -15,7 +15,7 @@ const config = {
     lineThickness: 0.5,
     lineColor: '#AFAFAF',
     nodeBaseSize: 9,
-    nodeScaleK: 1.0,
+    nodeScaleK: 0.5,
     nodeColor: '#F3F3F4',
     mergeTolerance: 1,
     showEdgeNodes: true,
