@@ -12,6 +12,7 @@ const config = {
     marginBottom: 100,
     columnSpacing: 1.5,
     rowSpacing: 0.8,
+    centerVertically: true,
     lineThickness: 1,
     lineColor: '#FFFFFF',
     nodeBaseSize: 9,
@@ -104,6 +105,7 @@ function readControlsToConfig() {
 
     config.columnSpacing = Math.max(0.05, parseFloat(document.getElementById('columnSpacing').value) || 0.05);
     config.rowSpacing = Math.max(0.05, parseFloat(document.getElementById('rowSpacing').value) || 0.05);
+    config.centerVertically = document.getElementById('centerVertically').checked;
     config.nodeBaseSize = parseFloat(document.getElementById('nodeBaseSize').value) || 2;
 
     config.nodesPerColumn = parseNodesPerColumn(nodesInput);
@@ -132,6 +134,10 @@ function generateNodes(cfg) {
             let nodeY;
             if (nodeCount === 1) {
                 nodeY = cfg.svgHeight / 2;
+            } else if (cfg.centerVertically) {
+                const fraction = rowIndex / (nodeCount - 1);
+                const unscaledY = cfg.marginTop + fraction * innerHeight;
+                nodeY = cfg.svgHeight / 2 + (unscaledY - cfg.svgHeight / 2) * cfg.rowSpacing;
             } else {
                 const fraction = rowIndex / (nodeCount - 1);
                 const spacingFraction = fraction * cfg.rowSpacing;
@@ -618,6 +624,7 @@ function randomizeNodes() {
 function resetGenerator() {
     document.getElementById('columnSpacing').value = '1.5';
     document.getElementById('rowSpacing').value = '0.8';
+    document.getElementById('centerVertically').checked = true;
     document.getElementById('nodeBaseSize').value = '9';
     document.getElementById('columnSpacingValue').textContent = '150%';
     document.getElementById('rowSpacingValue').textContent = '80%';
@@ -974,6 +981,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Set up randomize button
     document.getElementById('randomizeBtn').addEventListener('click', randomizeNodes);
     document.getElementById('resetBtn').addEventListener('click', resetGenerator);
+    document.getElementById('centerVertically').addEventListener('change', render);
 
     // Button event listeners
     document.getElementById('copyBtn').addEventListener('click', copySvg);

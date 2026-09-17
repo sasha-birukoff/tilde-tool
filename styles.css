@@ -61,6 +61,11 @@ button { -webkit-tap-highlight-color: transparent; }
 .btn-icon:hover { color: var(--text); background: rgba(255,255,255,.02); }
 
 .slider-row { display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; gap: 17px; align-items: center; }
+.alignment-toggle {
+    margin: 7px 0 0 81px; display: flex; align-items: center; gap: 7px;
+    color: var(--muted); font-size: 10px; line-height: 1;
+}
+.alignment-toggle input { width: 12px; height: 12px; accent-color: var(--blue-2); }
 .value-pill {
     min-width: 54px; padding: 0 10px; display: grid; place-items: center; border-color: var(--border-strong);
     font-family: var(--mono); font-size: 10px; line-height: 1; letter-spacing: 1.2px; font-variant-numeric: tabular-nums;
