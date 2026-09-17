@@ -97,6 +97,20 @@ function parseNodesPerColumn(inputStr) {
     return clamped;
 }
 
+function makeSymmetricCounts(counts) {
+    const middle = Math.ceil(counts.length / 2);
+    const front = counts.slice(0, middle);
+    const back = [...(counts.length % 2 === 0 ? front : front.slice(0, -1))].reverse();
+    return [...front, ...back];
+}
+
+function syncSymmetricInput() {
+    const toggle = document.getElementById('symmetricCounts');
+    if (!toggle?.checked) return;
+    const input = document.getElementById('nodesInput');
+    input.value = makeSymmetricCounts(parseNodesPerColumn(input.value)).join(', ');
+}
+
 /**
  * Read all control inputs and update config object
  */
@@ -609,11 +623,16 @@ function applyPreset(index) {
  */
 function randomizeNodes() {
     const numColumns = Math.floor(Math.random() * 4) + 3; // 3-6 columns
+    const symmetric = document.getElementById('symmetricCounts').checked;
+    const generatedColumns = symmetric ? Math.ceil(numColumns / 2) : numColumns;
     const nodes = [];
-    for (let i = 0; i < numColumns; i++) {
+    for (let i = 0; i < generatedColumns; i++) {
         nodes.push(Math.floor(Math.random() * 8) + 1); // 1-8 nodes
     }
-    document.getElementById('nodesInput').value = nodes.join(', ');
+    const outputNodes = symmetric
+        ? makeSymmetricCounts([...nodes, ...Array(numColumns - generatedColumns).fill(1)])
+        : nodes;
+    document.getElementById('nodesInput').value = outputNodes.join(', ');
 
     // Clear active preset
     document.querySelectorAll('.preset-btn').forEach(btn => btn.classList.remove('active'));
@@ -625,6 +644,7 @@ function resetGenerator() {
     document.getElementById('columnSpacing').value = '1.5';
     document.getElementById('rowSpacing').value = '0.8';
     document.getElementById('centerVertically').checked = true;
+    document.getElementById('symmetricCounts').checked = false;
     document.getElementById('nodeBaseSize').value = '9';
     document.getElementById('columnSpacingValue').textContent = '150%';
     document.getElementById('rowSpacingValue').textContent = '80%';
@@ -977,11 +997,25 @@ document.addEventListener('DOMContentLoaded', () => {
         document.querySelectorAll('.preset-btn').forEach(btn => btn.classList.remove('active'));
         render();
     });
+    const normalizeSymmetricInput = () => {
+        syncSymmetricInput();
+        render();
+    };
+    nodesInput.addEventListener('change', normalizeSymmetricInput);
+    nodesInput.addEventListener('blur', normalizeSymmetricInput);
+    nodesInput.addEventListener('keydown', event => {
+        if (event.key === 'Enter') normalizeSymmetricInput();
+    });
 
     // Set up randomize button
     document.getElementById('randomizeBtn').addEventListener('click', randomizeNodes);
     document.getElementById('resetBtn').addEventListener('click', resetGenerator);
     document.getElementById('centerVertically').addEventListener('change', render);
+    document.getElementById('symmetricCounts').addEventListener('change', () => {
+        syncSymmetricInput();
+        document.querySelectorAll('.preset-btn').forEach(btn => btn.classList.remove('active'));
+        render();
+    });
 
     // Button event listeners
     document.getElementById('copyBtn').addEventListener('click', copySvg);
