@@ -10,8 +10,8 @@ const config = {
     marginRight: 100,
     marginTop: 100,
     marginBottom: 100,
-    columnSpacing: 1.5,
-    rowSpacing: 0.8,
+    columnSpacing: 1,
+    rowSpacing: 1,
     centerVertically: true,
     lineThickness: 1,
     lineColor: '#FFFFFF',
@@ -37,7 +37,7 @@ const config = {
 
 let lastSvg = '';
 let lastStats = { nodes: 0, edges: 0, intersections: 0 };
-let activePresetIndex = 1;
+let activePresetIndex = 0;
 let animationFrameId = null;
 let animationStartTime = null;
 let animationPausedAt = 0;
@@ -48,10 +48,10 @@ let ffmpegInstance = null;
 
 // Preset configurations
 const presets = [
-    { name: 'Diamond', nodes: '1,5,3,5,1', columnSpacing: 1.0, rowSpacing: 1.0 },
     { name: 'Bow', nodes: '8,3,8', columnSpacing: 1.0, rowSpacing: 1.0 },
-    { name: 'Pinch', nodes: '3,1,3', columnSpacing: 1.0, rowSpacing: 1.0 },
-    { name: 'Burst', nodes: '1,8,1', columnSpacing: 1.0, rowSpacing: 1.0 },
+    { name: 'Diamond', nodes: '1,5,3,5,1', columnSpacing: 1.0, rowSpacing: 1.0 },
+    { name: 'Orbit', nodes: '1,5,7,5,1', columnSpacing: 1.0, rowSpacing: 1.0 },
+    { name: 'Mirror', nodes: '7,2,5,2,7', columnSpacing: 1.0, rowSpacing: 1.0 },
 ];
 
 const vibrantDegreePalette = [
@@ -641,16 +641,16 @@ function randomizeNodes() {
 }
 
 function resetGenerator() {
-    document.getElementById('columnSpacing').value = '1.5';
-    document.getElementById('rowSpacing').value = '0.8';
+    document.getElementById('columnSpacing').value = '1';
+    document.getElementById('rowSpacing').value = '1';
     document.getElementById('centerVertically').checked = true;
     document.getElementById('symmetricCounts').checked = false;
     document.getElementById('nodeBaseSize').value = '9';
-    document.getElementById('columnSpacingValue').textContent = '150%';
-    document.getElementById('rowSpacingValue').textContent = '80%';
+    document.getElementById('columnSpacingValue').textContent = '100%';
+    document.getElementById('rowSpacingValue').textContent = '100%';
     document.getElementById('nodeBaseSizeValue').textContent = '9';
     document.querySelectorAll('.slider').forEach(updateSliderProgress);
-    applyPreset(1);
+    applyPreset(0);
 }
 
 /**
@@ -967,7 +967,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const presetsGrid = document.getElementById('presetsGrid');
     presets.forEach((preset, index) => {
         const btn = document.createElement('button');
-        btn.className = 'preset-btn' + (index === 1 ? ' active' : '');
+        btn.className = 'preset-btn' + (index === 0 ? ' active' : '');
         btn.innerHTML = generatePresetPreview(preset.nodes);
         btn.title = preset.name;
         btn.addEventListener('click', () => applyPreset(index));
@@ -1141,7 +1141,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize with defaults.
     document.querySelectorAll('.slider, .motion-slider').forEach(updateSliderProgress);
     updateColorPreview();
-    applyPreset(1);
+    applyPreset(0);
     updatePlayPauseButton();
     if (animationFrameId === null) animationFrameId = requestAnimationFrame(animationLoop);
 });
